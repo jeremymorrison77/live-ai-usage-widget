@@ -78,7 +78,7 @@ Replace the example values. Configure the app group to match `TEAMID.BUNDLEID` i
 2. Run `claude auth login` or `codex login` and complete the provider-owned authentication. Never paste credentials into this app.
 3. Open a properly signed build. In the setup window select the providers you want and save. Connect → Sign in launches the official login command in Terminal; Check connection reads usage after sign-in.
 4. Refresh. “Connected” appears only after a fresh successful usage reading. Authentication or usage rate limits can delay the next attempt by fifteen minutes.
-5. Add Live AI Usage Widget through macOS's widget gallery (the window's Show me how button explains it; macOS doesn't let apps place widgets themselves). Enable “Open at login” if wanted. Keep the app running; closing its window is fine, quitting stops collection. Reopen the window from the Dock, with Command-comma, or with the widget's gear button.
+5. Add Live AI Usage Widget through macOS's widget gallery (the window's Show me how button explains it; macOS doesn't let apps place widgets themselves). Enable “Open at login” if wanted. Keep the app running; closing its window is fine, quitting stops collection. The app has no Dock icon; it lives in the menu bar (Settings, Check now, Quit). Reopen the window from there or with the widget's gear button.
 
 Before changing accounts, turn off that provider and save. This clears widget history and invalidates the collector cache. Then sign into the new account, enable the provider and save again. Account changes made outside this workflow cannot be reliably detected because the collector intentionally does not retain account identities.
 

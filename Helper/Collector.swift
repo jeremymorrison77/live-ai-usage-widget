@@ -3,7 +3,7 @@ import Darwin
 
 /// Shared by the app worker and deterministic tests; stores no raw provider output.
 enum Collector {
-    static func collect(previous: [String: Any], providers: [String], now: Date, interval: TimeInterval = 300,
+    static func collect(previous: [String: Any], providers: [String], now: Date, interval: TimeInterval = 300, force: Bool = false,
                         read: (String) throws -> [String: Any]) -> [String: Any] {
         // Successful readings wait the chosen interval; failures wait at least fifteen minutes.
         let backoff = max(900, interval)
@@ -11,7 +11,7 @@ enum Collector {
         for provider in providers where ["claude", "codex"].contains(provider) {
             var value = previous[provider] as? [String: Any] ?? [:]
             if let due = value["next_attempt_epoch"] as? Double,
-               due > now.timeIntervalSince1970,
+               due > now.timeIntervalSince1970, !(force && value["refresh_status"] as? String == "ok"),
                due <= now.timeIntervalSince1970 + (value["refresh_status"] as? String == "ok" ? interval : backoff) { result[provider] = value; continue }
             let stamp = UsageReader.iso(now)
             value["last_attempt_at"] = stamp
@@ -32,7 +32,7 @@ enum Collector {
         }
         return result
     }
-    static func run(root: URL, generation: String, providers: [String], interval: TimeInterval = 300) throws -> Data {
+    static func run(root: URL, generation: String, providers: [String], interval: TimeInterval = 300, force: Bool = false) throws -> Data {
         umask(0o077)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let fd = open(root.appendingPathComponent("collection.lock").path, O_CREAT|O_RDWR|O_NOFOLLOW, 0o600)
@@ -45,7 +45,7 @@ enum Collector {
         let probe = root.appendingPathComponent("probe", isDirectory: true)
         if let attributes = try? FileManager.default.attributesOfItem(atPath: probe.path), attributes[.type] as? FileAttributeType == .typeSymbolicLink { throw ReaderFailure("unavailable") }
         try FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let result = collect(previous: previous, providers: providers, now: Date(), interval: interval) { provider in
+        let result = collect(previous: previous, providers: providers, now: Date(), interval: interval, force: force) { provider in
             try provider == "claude" ? UsageReader.claude(directory: probe) : UsageReader.codex(directory: probe)
         }
         var saved = result; saved["_generation"] = generation

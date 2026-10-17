@@ -75,7 +75,7 @@ import Combine
         save()
         refresh()
     }
-    func refresh() {
+    func refresh(force: Bool = false) {
         guard !busy else { return }
         let settings = self.settings
         // Nothing to check until an account is turned on; stay quiet instead of reporting.
@@ -85,7 +85,7 @@ import Combine
         message = "Checking usage…"
         Task {
             let payload: Data? = await Task.detached {
-                try? Collector.run(root: root, generation: settings.generation, providers: settings.enabled, interval: Double(settings.refreshMinutes) * 60)
+                try? Collector.run(root: root, generation: settings.generation, providers: settings.enabled, interval: Double(settings.refreshMinutes) * 60, force: force)
             }.value
             defer { busy = false }
             guard settings.generation == self.settings.generation else { message = "Accounts changed. Checking again shortly."; return }
@@ -126,7 +126,42 @@ import Combine
         .handlesExternalEvents(matching: ["*"])
         .windowResizability(.contentSize)
         .commands { CommandGroup(replacing: .appSettings) { SettingsCommand() } }
+        // Menu bar icon instead of a Dock icon. Its label stays alive, so it also opens the window on request.
+        MenuBarExtra {
+            MenuContent(model: model)
+        } label: {
+            Image(nsImage: MenuIcon.image).modifier(WidgetLinks())
+        }
     }
+}
+
+struct MenuContent: View {
+    @ObservedObject var model: UsageModel
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Button("Settings…") { NSApp.activate(ignoringOtherApps: true); openWindow(id: "main") }
+        Button("Check now") { model.refresh(force: true) }.disabled(model.settings.enabled.isEmpty)
+        Divider()
+        Button("Quit Live AI Usage Widget") { NSApp.terminate(nil) }
+    }
+}
+
+/// The app icon's ring and pulse line, drawn as a template so macOS tints it for the menu bar.
+enum MenuIcon {
+    static let image: NSImage = {
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { _ in
+            let ring = NSBezierPath()
+            ring.appendArc(withCenter: NSPoint(x: 9, y: 9), radius: 7.5, startAngle: 120, endAngle: 60, clockwise: false)
+            ring.lineWidth = 1.6; ring.lineCapStyle = .round; ring.stroke()
+            let pulse = NSBezierPath()
+            pulse.move(to: NSPoint(x: 3.6, y: 9.4)); pulse.line(to: NSPoint(x: 6.6, y: 9.4)); pulse.line(to: NSPoint(x: 7.8, y: 6.9))
+            pulse.line(to: NSPoint(x: 9.6, y: 11.6)); pulse.line(to: NSPoint(x: 11.0, y: 8.5)); pulse.line(to: NSPoint(x: 14.4, y: 8.5))
+            pulse.lineWidth = 1.5; pulse.lineCapStyle = .round; pulse.lineJoinStyle = .round; pulse.stroke()
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }()
 }
 
 struct SettingsCommand: View {
@@ -141,6 +176,8 @@ struct SettingsView: View {
     @State private var widgetsPlaced: Int?
     @State private var showWidgetHelp = false
     @State private var showSetupHelp = false
+    @Environment(\.dismissWindow) private var dismissWindow
+    private static var launchHandled = false
     // Get started hides itself once every step is done; Setup help brings it back.
     private var setupDone: Bool { anyConnected && (widgetsPlaced ?? 0) > 0 && launchAtLogin }
     private var anyConnected: Bool {
@@ -149,7 +186,15 @@ struct SettingsView: View {
     private func checkWidgets() {
         WidgetCenter.shared.getCurrentConfigurations { result in
             let count = (try? result.get())?.count
-            DispatchQueue.main.async { widgetsPlaced = count }
+            DispatchQueue.main.async {
+                widgetsPlaced = count
+                // Once fully set up, a fresh launch (such as at login) stays in the menu bar.
+                guard !Self.launchHandled else { return }
+                Self.launchHandled = true
+                if !model.settings.enabled.isEmpty && (count ?? 0) > 0 && launchAtLogin && !URLRouter.shared.settingsRequested {
+                    dismissWindow(id: "main")
+                }
+            }
         }
     }
     private func step(_ number: Int, _ title: String, done: Bool) -> some View {
@@ -181,7 +226,7 @@ struct SettingsView: View {
                         catch { model.message = "Couldn't change Open at login. Check Login Items in System Settings."; launchAtLogin = SMAppService.mainApp.status == .enabled }
                     }
                 }
-                Text("You can close this window. The widget keeps updating while the app is running. Reopen this window from the Dock or the widget's gear button.").font(.caption).foregroundStyle(.secondary)
+                Text("You can close this window. The widget keeps updating while the app is running. Reopen this window from the menu bar icon or the widget's gear button.").font(.caption).foregroundStyle(.secondary)
             } header: { Text("Get started") }
             }
             Section("Accounts") {
@@ -259,7 +304,7 @@ struct SettingsView: View {
             }.padding(.vertical, 14).frame(maxWidth: .infinity).background(.bar)
             }
             .frame(width: 520, height: 640)
-            .onAppear { checkWidgets() }
+            .onAppear { NSApp.activate(ignoringOtherApps: true); checkWidgets() }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in checkWidgets() }
             .sheet(isPresented: $showWidgetHelp) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -324,7 +369,9 @@ struct SettingsView: View {
             if url.host == "settings" { settings = true } else if url.host == "refresh" { refresh = true }
         }
     }
-    @Published var settings = false
+    @Published var settings = false { didSet { if settings { settingsRequested = true } } }
+    /// Set once anything asks for the window, so a quiet start never hides a window the user wanted.
+    var settingsRequested = false
     @Published var refresh = false
 }
 
@@ -348,6 +395,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func application(_ application: NSApplication, open urls: [URL]) { URLRouter.shared.url = urls.first }
     func applicationWillTerminate(_ notification: Notification) { ChildProcess.stopAll() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+    // Opening the app again from Applications shows the window.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        URLRouter.shared.settings = true
+        return true
+    }
 }
 
 struct PercentField: View {

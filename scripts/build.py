@@ -34,12 +34,12 @@ def main():
     for folder, executable, bundle, kind in [(app, 'UsageWidget', args.bundle_id, 'APPL'),
                                             (extension, 'UsageWidgetExtension', args.bundle_id + '.widget', 'XPC!')]:
         info = dict(CFBundleDisplayName='Live AI Usage Widget', CFBundleName='Live AI Usage Widget', CFBundleExecutable=executable,
-                    CFBundleIdentifier=bundle, CFBundlePackageType=kind, CFBundleVersion='8',
+                    CFBundleIdentifier=bundle, CFBundlePackageType=kind, CFBundleVersion='9',
                     CFBundleShortVersionString='0.3.1', LSMinimumSystemVersion='14.0', UsageAppGroup=group)
         if kind == 'XPC!':
             info['NSExtension'] = {'NSExtensionPointIdentifier': 'com.apple.widgetkit-extension'}
         else:
-            info.update(CFBundleIconFile='LiveAIUsageWidget.icns', NSPrincipalClass='NSApplication', CFBundleURLTypes=[{'CFBundleURLSchemes': ['live-ai-usage-widget']}])
+            info.update(CFBundleIconFile='LiveAIUsageWidget.icns', NSPrincipalClass='NSApplication', LSUIElement=True, CFBundleURLTypes=[{'CFBundleURLSchemes': ['live-ai-usage-widget']}])
         (folder / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
         entitlement = {'com.apple.security.application-groups': [group]}
         if kind == 'XPC!':

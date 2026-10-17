@@ -80,6 +80,10 @@ import Darwin
         _ = Collector.collect(previous: hourly, providers: ["codex"], now: now.addingTimeInterval(1800), interval: 3600) { _ in custom += 1; return result }
         _ = Collector.collect(previous: hourly, providers: ["codex"], now: now.addingTimeInterval(400), interval: 300) { _ in custom += 1; return result }
         precondition(custom == 4)
+        // Check now re-reads a fresh success but still respects failure backoff.
+        _ = Collector.collect(previous: hourly, providers: ["codex"], now: now.addingTimeInterval(10), interval: 3600, force: true) { _ in custom += 1; return result }
+        _ = Collector.collect(previous: failed, providers: ["codex"], now: now.addingTimeInterval(310), force: true) { _ in custom += 1; return result }
+        precondition(custom == 5)
         let empty = try Collector.run(root: directory, generation: "new", providers: [])
         let decoded = try JSONSerialization.jsonObject(with: empty) as! [String: Any]; precondition(decoded["usage"] as? [String: String] == [:])
         print("Native reader checks passed: exact buckets, invalid values, optional models, timezone, cursor redraw, stdio, PTY, timeout, backoff, sanitized failure, recovery, disabled providers")
