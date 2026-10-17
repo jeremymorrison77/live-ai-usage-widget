@@ -1,12 +1,12 @@
 # Maintainer handoff
 
-Current version: **0.3.1 beta (build 9), Apple Silicon, macOS 14+**, published as a GitHub prerelease. This repository is the whole project; it has no parent workspace.
+Current version: **1.0.0 (build 10), Apple Silicon, macOS 14+**, published as a full GitHub release. This repository is the whole project; it has no parent workspace.
 
 ## Current state
 
 - Name: Live AI Usage Widget. Bundle identifier `com.liveaiusagewidget.app`, widget `com.liveaiusagewidget.app.widget`, app group `TEAMID.com.liveaiusagewidget.app`, link scheme `live-ai-usage-widget://`.
-- The app opens one setup window (Get started steps, hidden once all are done with a Setup help link to show them, accounts, appearance, updates interval, small-widget readings; Setup help and Save settings centered at the bottom). There is no separate preview window. Clean is the default style.
-- Tests, compile-only build, source export and CI pass. 0.3.1 is notarized (submission `7be4e79c-d04d-4a75-afbd-4d679b5c944c`), app ZIP SHA-256 `d331e2ca5f086d2d19b17d771bac9c87e07a4f833b4fdb5a8c75cee825633c88`.
+- The app is a menu bar app (no Dock icon) with Settings, Check now and Quit. It opens one setup window (Get started steps, hidden once all are done with a Setup help link to show them, accounts, appearance, updates interval, small-widget readings; Setup help and Save settings centered at the bottom). There is no separate preview window. Clean is the default style.
+- Tests, compile-only build, source export and CI pass. 1.0.0 is notarized (submission `0f38362b-858a-44d6-9b3e-06d62ba8d039`), app ZIP SHA-256 `c9f9b66b046ee8e4c49e51138200128883eff2899b7a066d8466c5d60c9151df`.
 - README pictures in `docs/images/` are drawn offscreen from the app's real views with sample data, then stripped of metadata. `scripts/package.py` refuses PNGs that carry metadata.
 
 Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for what is still untested.

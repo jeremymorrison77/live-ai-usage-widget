@@ -1,6 +1,6 @@
 # Release acceptance
 
-Version 0.3.1 beta. A signed, notarized Apple Silicon ZIP is prepared. Notarization establishes Apple's distribution check, not compatibility with every account or Mac.
+Version 1.0.0. A signed, notarized Apple Silicon ZIP is prepared. Notarization establishes Apple's distribution check, not compatibility with every account or Mac.
 
 ## Verified locally
 
@@ -14,7 +14,7 @@ Version 0.3.1 beta. A signed, notarized Apple Silicon ZIP is prepared. Notarizat
 - [x] Apple notarization Accepted, ticket stapled, signature verification and Gatekeeper acceptance.
 - [x] Versioned app ZIP and SHA-256 checksum; installation/update/uninstall instructions.
 
-## Beta/publication checks
+## Publication and follow-up checks
 
 - [x] Review the exact allowlisted source and app artifacts before upload.
 - [x] Create the repository (live-ai-usage-widget, private for now) and run its CI. Enable private vulnerability reporting if it is made public. Never publish a containing private project or its history.
@@ -23,9 +23,9 @@ Version 0.3.1 beta. A signed, notarized Apple Silicon ZIP is prepared. Notarizat
 - [ ] Verify US/EU dates, all styles/sizes, color controls, macOS full-color/tinted appearance and accessibility in installed widgets.
 - [ ] Test login-item enable/disable, reboot, sleep/wake, app relaunch, account switching and uninstall.
 - [ ] Observe natural credential renewal with fresh source timestamps, revoked authorization and network recovery. Existing-account success is not proof of renewal.
-- [ ] Record a supported provider-version/account-plan matrix. Intel is not supported by this beta artifact.
+- [ ] Record a supported provider-version/account-plan matrix. Intel is not supported.
 
-Keep these limits explicit in a beta release. Do not describe the app as universally installable or permanently authenticated.
+Keep these limits explicit in release notes and the README. Do not describe the app as universally installable or permanently authenticated.
 
 ## Maintainer distribution commands
 

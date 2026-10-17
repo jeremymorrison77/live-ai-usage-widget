@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.0.0 (build 10) — 10/17/2026
+
+Same app as 0.3.1 build 9 below with the version set to 1.0.0; re-signed and re-notarized (submission 0f38362b-858a-44d6-9b3e-06d62ba8d039 Accepted; app ZIP SHA-256 c9f9b66b046ee8e4c49e51138200128883eff2899b7a066d8466c5d60c9151df). Tests and stapled/Gatekeeper checks pass.
+
 ## 0.3.1 (build 9) — 10/17/2026
 
 Get started hides once all three steps are done (Setup help button beside Save settings brings it back), Preview usage removed, gallery shows sample readings, adjustable check interval (default 5 minutes). Tests (including new interval checks), signed build and notarization pass (submission 7be4e79c-d04d-4a75-afbd-4d679b5c944c Accepted). App ZIP SHA-256: d331e2ca5f086d2d19b17d771bac9c87e07a4f833b4fdb5a8c75cee825633c88. Installed fresh on the development Mac with earlier settings cleared for a first-run walkthrough. Remaining limits match 0.3.0 below.
