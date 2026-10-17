@@ -2,7 +2,7 @@
 
 ## 0.3.1 — beta
 
-Get started hides itself once all three steps are done; a small Setup help link at the bottom brings it back.
+Get started hides itself once all three steps are done; a Setup help button beside Save settings brings it back. Both buttons are centered at the bottom. The Preview usage section is gone. The widget gallery now shows sample readings instead of "Waiting for readings", and its description is simply "Claude and ChatGPT usage remaining." The Show me how guide names the widget exactly and explains up front why this step is manual. New Updates setting: check every N minutes (default 5, any value from 1 to 1,440); failed checks still wait at least 15 minutes.
 
 ## 0.3.0 — beta
 

@@ -72,6 +72,14 @@ import Darwin
         let recovered = Collector.collect(previous: failed, providers: ["codex"], now: now.addingTimeInterval(1200)) { _ in result }
         precondition((recovered["codex"] as! [String: Any])["refresh_status"] as? String == "ok")
         precondition(Collector.collect(previous: first, providers: [], now: now) { _ in result }.isEmpty)
+        // Custom check interval: one minute re-reads after a minute; an hour waits; shortening applies at once.
+        var custom = 0
+        let minute = Collector.collect(previous: [:], providers: ["codex"], now: now, interval: 60) { _ in custom += 1; return result }
+        _ = Collector.collect(previous: minute, providers: ["codex"], now: now.addingTimeInterval(61), interval: 60) { _ in custom += 1; return result }
+        let hourly = Collector.collect(previous: [:], providers: ["codex"], now: now, interval: 3600) { _ in custom += 1; return result }
+        _ = Collector.collect(previous: hourly, providers: ["codex"], now: now.addingTimeInterval(1800), interval: 3600) { _ in custom += 1; return result }
+        _ = Collector.collect(previous: hourly, providers: ["codex"], now: now.addingTimeInterval(400), interval: 300) { _ in custom += 1; return result }
+        precondition(custom == 4)
         let empty = try Collector.run(root: directory, generation: "new", providers: [])
         let decoded = try JSONSerialization.jsonObject(with: empty) as! [String: Any]; precondition(decoded["usage"] as? [String: String] == [:])
         print("Native reader checks passed: exact buckets, invalid values, optional models, timezone, cursor redraw, stdio, PTY, timeout, backoff, sanitized failure, recovery, disabled providers")

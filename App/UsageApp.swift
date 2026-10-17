@@ -83,7 +83,7 @@ import Combine
         message = "Refreshing…"
         Task {
             let payload: Data? = await Task.detached {
-                try? Collector.run(root: root, generation: settings.generation, providers: settings.enabled)
+                try? Collector.run(root: root, generation: settings.generation, providers: settings.enabled, interval: Double(settings.refreshMinutes) * 60)
             }.value
             defer { busy = false }
             guard settings.generation == self.settings.generation else { message = "Accounts changed; refresh again."; return }
@@ -135,7 +135,6 @@ struct SettingsCommand: View {
 struct SettingsView: View {
     @ObservedObject var model: UsageModel
     @State private var login: String?
-    @State private var previewRemaining = 65.0
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var widgetsPlaced: Int?
     @State private var showWidgetHelp = false
@@ -159,6 +158,7 @@ struct SettingsView: View {
         }
     }
     var body: some View {
+        VStack(spacing: 0) {
         Form {
             if !setupDone || showSetupHelp {
             Section {
@@ -222,6 +222,17 @@ struct SettingsView: View {
                     Text("or less remaining"); Spacer(); colorPicker($model.settings.lowColor)
                 }
             }
+            Section("Updates") {
+                HStack {
+                    Text("Check every")
+                    Spacer()
+                    TextField("Minutes", value: Binding(get: { model.settings.refreshMinutes }, set: { model.settings.refreshMinutes = min(1440, max(1, $0)) }), format: .number)
+                        .labelsHidden().textFieldStyle(.roundedBorder).frame(width: 56).multilineTextAlignment(.center)
+                    Stepper("", value: $model.settings.refreshMinutes, in: 1...1440).labelsHidden()
+                    Text(model.settings.refreshMinutes == 1 ? "minute" : "minutes")
+                }
+                Text("Default is 5 minutes. After a failed check the app waits at least 15 minutes. Save settings to apply.").font(.caption).foregroundStyle(.secondary)
+            }
             if !metricChoices.isEmpty {
             Section("Small widget readings") {
                 ForEach(metricChoices, id: \.self) { key in
@@ -233,34 +244,29 @@ struct SettingsView: View {
                 Text("Up to five readings, in provider order. Medium and large show every available reading.").font(.caption).foregroundStyle(.secondary)
             }
             }
-            Section("Preview usage") {
-                Slider(value: $previewRemaining, in: 0...100, step: 1)
-                HStack {
-                    Text("Sample"); Spacer()
-                    Text("\(Int(previewRemaining))% remaining").foregroundStyle(model.settings.color(for: previewRemaining)).monospacedDigit()
+        }.formStyle(.grouped)
+            VStack(spacing: 6) {
+                HStack(spacing: 12) {
+                    if setupDone {
+                        Button { showSetupHelp.toggle() } label: { Text(showSetupHelp ? "Hide setup help" : "Setup help").frame(width: 130) }
+                    }
+                    Button { model.save(); model.refresh() } label: { Text("Save settings").frame(width: 130) }
+                        .keyboardShortcut(.defaultAction)
                 }
-                StatusView(status: previewStatus, date: Date(), compact: true, settings: previewSettings)
-                    .padding(12).frame(width: 164, height: 164)
-                    .background(model.settings.style == "solar" ? Color.orange.opacity(0.06) : Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 18))
-                    .allowsHitTesting(false)
-            }
-
-            Button("Save settings") { model.save(); model.refresh() }
-            Text(model.message).font(.caption)
-            if setupDone {
-                Button(showSetupHelp ? "Hide setup help" : "Setup help") { showSetupHelp.toggle() }
-                    .buttonStyle(.link).font(.caption)
-            }
-        }.formStyle(.grouped).frame(width: 520, height: 720)
+                if !model.message.isEmpty { Text(model.message).font(.caption).foregroundStyle(.secondary) }
+            }.padding(.vertical, 14).frame(maxWidth: .infinity)
+        }.frame(width: 520, height: 640)
             .onAppear { checkWidgets() }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in checkWidgets() }
             .sheet(isPresented: $showWidgetHelp) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Add the widget to your desktop").font(.headline)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Add the widget to your desktop").font(.headline)
+                        Text("macOS doesn't let apps place widgets themselves, so this step is yours.").font(.caption).foregroundStyle(.secondary)
+                    }.padding(.bottom, 8)
                     Text("1. Right-click an empty spot on your desktop and choose Edit Widgets.")
-                    Text("2. Search for Live AI Usage.")
+                    Text("2. Search for Live AI Usage Widget.")
                     Text("3. Pick a size and drag it onto your desktop, then click Done.")
-                    Text("macOS doesn't let apps place widgets themselves, so this step is yours.").font(.caption).foregroundStyle(.secondary)
                     HStack { Spacer(); Button("Done") { showWidgetHelp = false; checkWidgets() }.keyboardShortcut(.defaultAction) }
                 }.padding(24).frame(width: 400)
             }
@@ -297,13 +303,6 @@ struct SettingsView: View {
     }
     private func metricTitle(_ key: String) -> String {
         key.replacingOccurrences(of: "claude:", with: "Claude · ").replacingOccurrences(of: "codex:", with: "ChatGPT · ")
-    }
-    private var previewSettings: WidgetSettings {
-        var value = model.settings; value.enabled = ["claude", "codex"]; value.hiddenSmallMetrics = []; return value
-    }
-    private var previewStatus: WidgetStatus {
-        let reading = UsageWindow(window: "5-hour", usedPercent: 100-previewRemaining, resetsAt: Date().addingTimeInterval(3600))
-        return WidgetStatus(usage: ["claude": AgentUsage(observedAt: Date(), windows: [reading]), "codex": AgentUsage(observedAt: Date(), windows: [reading])])
     }
     private func colorPicker(_ hex: Binding<String>) -> some View {
         ColorPicker("Color", selection: Binding(get: { WidgetSettings.color(hex: hex.wrappedValue) }, set: { color in

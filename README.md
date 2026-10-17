@@ -29,7 +29,7 @@ Pictures are drawn from the app's own views with made-up sample readings, not a 
 - Remaining percentages and a six-hour history of observed consumption rate; no invented activity. Missing coverage is a flat placeholder, distinguished in hover/accessibility text.
 - Whole traces use the same color as their percentages. Small widgets use extra space for reset information when fewer metrics are present.
 - US/European dates, color swatches and thresholds, muted refresh/settings links, optional opening at login.
-- Five-minute collection target while the app is running; failed providers wait fifteen minutes. Manual refresh respects this backoff. WidgetKit decides actual repaint timing.
+- Checks every five minutes by default while the app is running (adjustable in Updates, 1 to 1,440 minutes); failed providers wait at least fifteen minutes. Manual refresh respects this backoff. WidgetKit decides actual repaint timing.
 - Source timestamps remain unchanged after failures. Failure dates appear in the footer; cached values fade as they age.
 
 Choose Clean bars, Solar rings or Trends history. Settings include per-metric small-widget selection and a Sign in button that opens the official tool in Terminal. There is no name/logo header or logo upload.
@@ -48,7 +48,7 @@ No provider binaries, Python runtime, credentials or private signing material ar
 
 1. Download the macOS arm64 ZIP from a published GitHub release and compare its SHA-256 checksum with the accompanying checksum file.
 2. Unzip it and drag **Live AI Usage Widget.app** into Applications. Open it normally. A notarized build should pass macOS Gatekeeper; do not disable security checks.
-3. The setup window opens. Follow its three Get started steps (they hide once all are done; Setup help at the bottom brings them back): connect your accounts, add the widget to your desktop (right-click the desktop → Edit Widgets → search Live AI Usage), and optionally turn on Open at login.
+3. The setup window opens. Follow its three Get started steps (they hide once all are done; Setup help at the bottom brings them back): connect your accounts, add the widget to your desktop (right-click the desktop → Edit Widgets → search Live AI Usage Widget), and optionally turn on Open at login.
 4. For updates, quit this app normally, replace it in Applications, and reopen it. Settings are retained. There is no automatic updater.
 
 Version 0.2.1 installation, launch, settings, all three gallery previews, official Claude sign-in, real readings and small desktop-widget repaint passed on a second Apple Silicon Mac. Browser-downloaded quarantine acceptance, reboot and natural credential renewal remain unverified.

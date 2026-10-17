@@ -116,7 +116,8 @@ struct AgentUsage: Codable {
     let observedAt: Date?
     let windows: [UsageWindow]
     var refresh: UsageRefresh? = nil
-    static let staleAfter: TimeInterval = 45 * 60
+    // Readings fade after 45 minutes, or later when checks are spaced further apart.
+    static var staleAfter: TimeInterval { max(45 * 60, Double(WidgetSettings.load().refreshMinutes) * 90) }
 
     func isStale(at date: Date) -> Bool {
         guard let observedAt else { return true }
@@ -201,7 +202,16 @@ extension UsageWindow {
 struct WidgetStatus: Codable {
     var usage: [String: AgentUsage]? = nil
     var usageHistory: [String: [UsageObservation]]? = nil
-    static let preview = WidgetStatus()
+    /// Sample readings for the widget gallery only; never written to storage.
+    static var preview: WidgetStatus {
+        let now = Date(), hour: TimeInterval = 3600
+        let ok = UsageRefresh(status: .ok, lastAttemptAt: now, lastSuccessAt: now, lastFailureAt: nil, failureReason: nil)
+        return WidgetStatus(usage: [
+            "claude": AgentUsage(observedAt: now, windows: [UsageWindow(window: "5-hour", usedPercent: 38, resetsAt: now.addingTimeInterval(2.2 * hour)),
+                                                           UsageWindow(window: "weekly all", usedPercent: 76, resetsAt: now.addingTimeInterval(74 * hour))], refresh: ok),
+            "codex": AgentUsage(observedAt: now, windows: [UsageWindow(window: "5-hour", usedPercent: 18, resetsAt: now.addingTimeInterval(3.4 * hour)),
+                                                          UsageWindow(window: "weekly", usedPercent: 92, resetsAt: now.addingTimeInterval(118 * hour))], refresh: ok)])
+    }
     // Usage freshness is independent of recording and health publication.
     var usageObservedAt: Date? {
         ["claude", "codex"].compactMap { usage?[$0]?.observedAt }.min()

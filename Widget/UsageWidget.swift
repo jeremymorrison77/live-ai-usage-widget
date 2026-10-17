@@ -4,11 +4,12 @@ import WidgetKit
 struct StatusEntry: TimelineEntry {
     let date: Date
     let status: WidgetStatus?
+    var sample = false
 }
 struct Provider: TimelineProvider {
-    func placeholder(in context: Context) -> StatusEntry { StatusEntry(date: Date(), status: .preview) }
+    func placeholder(in context: Context) -> StatusEntry { StatusEntry(date: Date(), status: .preview, sample: true) }
     func getSnapshot(in context: Context, completion: @escaping (StatusEntry) -> Void) {
-        completion(StatusEntry(date: Date(), status: context.isPreview ? .preview : StatusStore.load()))
+        completion(context.isPreview ? StatusEntry(date: Date(), status: .preview, sample: true) : StatusEntry(date: Date(), status: StatusStore.load()))
     }
     func getTimeline(in context: Context, completion: @escaping (Timeline<StatusEntry>) -> Void) {
         let now = Date()
@@ -24,8 +25,14 @@ struct Provider: TimelineProvider {
 struct WidgetView: View {
     @Environment(\.widgetFamily) var family
     let entry: StatusEntry
+    // The gallery preview shows both providers with sample readings, even before setup.
+    private var settings: WidgetSettings {
+        var value = WidgetSettings.load()
+        if entry.sample { value.enabled = ["claude", "codex"]; value.hiddenSmallMetrics = [] }
+        return value
+    }
     var body: some View {
-        StatusView(status: entry.status, date: entry.date, compact: family == .systemSmall, large: family == .systemLarge)
+        StatusView(status: entry.status, date: entry.date, compact: family == .systemSmall, large: family == .systemLarge, settings: settings)
             .containerBackground(for: .widget) { WidgetPaper(style: WidgetSettings.load().style) }
     }
 }
@@ -34,7 +41,7 @@ struct UsageWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: StatusStore.kind, provider: Provider()) { WidgetView(entry: $0) }
             .configurationDisplayName("Live AI Usage Widget")
-            .description("Claude and ChatGPT coding usage remaining. Old readings are marked.")
+            .description("Claude and ChatGPT usage remaining.")
             .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
