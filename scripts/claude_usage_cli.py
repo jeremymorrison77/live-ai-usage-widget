@@ -17,7 +17,7 @@ import termios
 import time
 from zoneinfo import ZoneInfo
 
-PROBE = Path(tempfile.gettempdir()) / ('usage-widget-probe-' + str(os.getuid()))
+PROBE = Path(tempfile.gettempdir()) / ('live-ai-usage-widget-probe-' + str(os.getuid()))
 BINARY = shutil.which('claude') or str(Path.home() / '.local/bin/claude')
 
 

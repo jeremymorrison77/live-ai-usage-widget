@@ -11,7 +11,7 @@ struct WidgetSettings: Codable {
     var highColor = "#39A66B"
     var middleColor = "#E99A38"
     var lowColor = "#D65B64"
-    var style = "trends"
+    var style = "clean"
     var hiddenSmallMetrics: [String] = []
     init() {}
     enum CodingKeys: String, CodingKey { case enabled, generation, usDates, usageColors, highThreshold, lowThreshold, highColor, middleColor, lowColor, style, hiddenSmallMetrics }
@@ -26,8 +26,8 @@ struct WidgetSettings: Codable {
         highColor = try c.decodeIfPresent(String.self, forKey: .highColor) ?? "#39A66B"
         middleColor = try c.decodeIfPresent(String.self, forKey: .middleColor) ?? "#E99A38"
         lowColor = try c.decodeIfPresent(String.self, forKey: .lowColor) ?? "#D65B64"
-        style = try c.decodeIfPresent(String.self, forKey: .style) ?? "trends"
-        if !["clean", "solar", "trends"].contains(style) { style = "trends" }
+        style = try c.decodeIfPresent(String.self, forKey: .style) ?? "clean"
+        if !["clean", "solar", "trends"].contains(style) { style = "clean" }
         hiddenSmallMetrics = try c.decodeIfPresent([String].self, forKey: .hiddenSmallMetrics) ?? []
         if !highThreshold.isFinite || !lowThreshold.isFinite || lowThreshold < 0 || highThreshold > 100 || lowThreshold >= highThreshold {
             highThreshold = 30; lowThreshold = 10

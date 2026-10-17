@@ -1,10 +1,10 @@
 # Release acceptance
 
-Version 0.2.1 beta candidate. A signed, notarized Apple Silicon ZIP is prepared. Notarization establishes Apple's distribution check, not compatibility with every account or Mac.
+Version 0.3.0 beta. A signed, notarized Apple Silicon ZIP is prepared. Notarization establishes Apple's distribution check, not compatibility with every account or Mac.
 
 ## Verified locally
 
-- [x] Product name Live Usage Widget; MIT license included.
+- [x] Product name Live AI Usage Widget; MIT license included.
 - [x] Native Swift collector; no runtime Python dependency or bundled provider binaries.
 - [x] Clean, Solar and Trends, small/medium/large layouts, account selection and small-widget metric selection.
 - [x] Reader protocol/parser, timeout, privacy filtering, retry/backoff, failure retention and history tests.
@@ -16,8 +16,8 @@ Version 0.2.1 beta candidate. A signed, notarized Apple Silicon ZIP is prepared.
 
 ## Beta/publication checks
 
-- [ ] Review the exact allowlisted source and app artifacts before public upload.
-- [ ] Create the intended repository, enable private vulnerability reporting, and run its CI. Proposed repository: live-usage-widget. Never publish a containing private project or its history.
+- [x] Review the exact allowlisted source and app artifacts before upload.
+- [x] Create the repository (live-ai-usage-widget, private for now) and run its CI. Enable private vulnerability reporting if it is made public. Never publish a containing private project or its history.
 - [x] Confirm desktop widget gallery registration and actual timeline rendering on a separate Mac (small widget, 10/17/2026). Medium/large actual desktop placement still needs review.
 - [ ] Test a downloaded archive on a separate Apple Silicon Mac or fresh macOS user: Claude alone, ChatGPT alone, both and neither; missing tools and first-run sign-in.
 - [ ] Verify US/EU dates, all styles/sizes, color controls, macOS full-color/tinted appearance and accessibility in installed widgets.

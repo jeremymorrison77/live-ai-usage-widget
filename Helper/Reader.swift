@@ -138,7 +138,7 @@ enum UsageReader {
     static func codex(directory: URL, binary: String? = nil, timeout: Double = 15) throws -> [String: Any] {
         let child = try ChildProcess(binary: binary ?? find("codex"), arguments: ["app-server", "--listen", "stdio://"], directory: directory.path)
         defer { child.stop() }
-        try child.sendJSON(["id": 0, "method": "initialize", "params": ["clientInfo": ["name": "live_usage_widget", "title": "Live Usage Widget", "version": "0.2.0"]]])
+        try child.sendJSON(["id": 0, "method": "initialize", "params": ["clientInfo": ["name": "live_ai_usage_widget", "title": "Live AI Usage Widget", "version": "0.3.0"]]])
         let start = ProcessInfo.processInfo.systemUptime
         var pending = Data(), total = 0, initialized = false
         while ProcessInfo.processInfo.systemUptime - start < timeout {

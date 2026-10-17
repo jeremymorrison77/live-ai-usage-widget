@@ -3,6 +3,7 @@ import SwiftUI
 import WidgetKit
 import ServiceManagement
 import Darwin
+import Combine
 
 @MainActor final class UsageModel: ObservableObject {
     @Published var settings = WidgetSettings.load()
@@ -10,9 +11,14 @@ import Darwin
     @Published var busy = false
     @Published var message = ""
     var timer: Timer?
+    private var links: AnyCancellable?
     init() {
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
+        }
+        links = URLRouter.shared.$refresh.sink { [weak self] requested in
+            guard requested else { return }
+            DispatchQueue.main.async { URLRouter.shared.refresh = false; self?.refresh() }
         }
     }
     func save() {
@@ -38,7 +44,7 @@ import Darwin
             let binary = try UsageReader.find(provider)
             settings.generation = UUID().uuidString
             save()
-            let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveUsageWidget")
+            let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             let script = root.appendingPathComponent("connect-" + provider + ".command")
             func quote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\"'\"'") + "'" }
@@ -52,7 +58,7 @@ import Darwin
     func finishClaudeSetup() {
         do {
             let binary = try UsageReader.find("claude")
-            let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveUsageWidget")
+            let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
             let probe = root.appendingPathComponent("probe")
             try FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
             func quote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\"'\"'") + "'" }
@@ -72,7 +78,7 @@ import Darwin
     func refresh() {
         guard !busy else { return }
         let settings = self.settings
-        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "UsageWidget")
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
         busy = true
         message = "Refreshing…"
         Task {
@@ -108,20 +114,22 @@ import Darwin
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = UsageModel()
     var body: some Scene {
-        WindowGroup("Live Usage Widget", id: "main") {
-            VStack(spacing: 16) {
-                StatusView(status: model.status, date: Date(), large: true, settings: model.settings)
-                    .padding(12).frame(width: 344, height: 344)
-                    .background { WidgetPaper(style: model.settings.style).clipShape(RoundedRectangle(cornerRadius: 20)) }
-                Text(model.message).font(.caption).foregroundStyle(.secondary)
-                HStack { Button("Refresh") { model.refresh() }; SettingsLink() }
-            }.padding().onAppear { model.refresh() }
-                .modifier(WidgetLinks(model: model))
+        // The setup window is the app's only window; closing it leaves collection running.
+        Window("Live AI Usage Widget", id: "main") {
+            SettingsView(model: model)
+                .onAppear { model.refresh() }
+                .modifier(WidgetLinks())
                 .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         }
         .handlesExternalEvents(matching: ["*"])
-        Settings { SettingsView(model: model) }
+        .windowResizability(.contentSize)
+        .commands { CommandGroup(replacing: .appSettings) { SettingsCommand() } }
     }
+}
+
+struct SettingsCommand: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View { Button("Settings…") { openWindow(id: "main") }.keyboardShortcut(",") }
 }
 
 struct SettingsView: View {
@@ -129,8 +137,47 @@ struct SettingsView: View {
     @State private var login: String?
     @State private var previewRemaining = 65.0
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var widgetsPlaced: Int?
+    @State private var showWidgetHelp = false
+    private var anyConnected: Bool {
+        model.settings.enabled.contains { model.status?.usage?[$0]?.refresh?.status == .ok && model.status?.usage?[$0]?.isStale(at: Date()) == false }
+    }
+    private func checkWidgets() {
+        WidgetCenter.shared.getCurrentConfigurations { result in
+            let count = (try? result.get())?.count
+            DispatchQueue.main.async { widgetsPlaced = count }
+        }
+    }
+    private func step(_ number: Int, _ title: String, done: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle")
+                .foregroundStyle(done ? Color.green : Color.secondary).font(.title3)
+            Text(title)
+        }
+    }
     var body: some View {
         Form {
+            Section {
+                HStack {
+                    step(1, "Turn on Claude, ChatGPT or both, then connect", done: anyConnected)
+                    Spacer()
+                }
+                HStack {
+                    step(2, "Add the widget to your desktop", done: (widgetsPlaced ?? 0) > 0)
+                    Spacer()
+                    if (widgetsPlaced ?? 0) > 0 { Text("On desktop").foregroundStyle(.secondary) }
+                    else { Button("Show me how") { showWidgetHelp = true } }
+                }
+                HStack {
+                    step(3, "Open at login so it keeps running", done: launchAtLogin)
+                    Spacer()
+                    Toggle("Open at login", isOn: $launchAtLogin).labelsHidden().onChange(of: launchAtLogin) { _, on in
+                        do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
+                        catch { model.message = "Login-item change failed. Check macOS Login Items settings."; launchAtLogin = SMAppService.mainApp.status == .enabled }
+                    }
+                }
+                Text("You can close this window. The widget keeps updating while the app is running. Reopen this window from the Dock or the widget's gear button.").font(.caption).foregroundStyle(.secondary)
+            } header: { Text("Get started") }
             Section("Accounts") {
                 ForEach(["claude", "codex"], id: \.self) { provider in
                     HStack {
@@ -193,16 +240,21 @@ struct SettingsView: View {
                     .allowsHitTesting(false)
             }
 
-            Section("Background collection") {
-                Toggle("Open at login", isOn: $launchAtLogin).onChange(of: launchAtLogin) { _, on in
-                    do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
-                    catch { model.message = "Login-item change failed. Check macOS Login Items settings."; launchAtLogin = SMAppService.mainApp.status == .enabled }
-                }
-                Text("Keep the app running for automatic refresh. Closing its window is fine; quitting stops collection. Connect an existing official provider tool, or install it using the link in Accounts.").font(.caption).foregroundStyle(.secondary)
-            }
             Button("Save settings") { model.save(); model.refresh() }
             Text(model.message).font(.caption)
-        }.formStyle(.grouped).frame(width: 520, height: 700)
+        }.formStyle(.grouped).frame(width: 520, height: 720)
+            .onAppear { checkWidgets() }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in checkWidgets() }
+            .sheet(isPresented: $showWidgetHelp) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Add the widget to your desktop").font(.headline)
+                    Text("1. Right-click an empty spot on your desktop and choose Edit Widgets.")
+                    Text("2. Search for Live AI Usage.")
+                    Text("3. Pick a size and drag it onto your desktop, then click Done.")
+                    Text("macOS doesn't let apps place widgets themselves, so this step is yours.").font(.caption).foregroundStyle(.secondary)
+                    HStack { Spacer(); Button("Done") { showWidgetHelp = false; checkWidgets() }.keyboardShortcut(.defaultAction) }
+                }.padding(24).frame(width: 400)
+            }
             .sheet(item: Binding(get: { login.map(Login.init) }, set: { login = $0?.id })) { item in
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Connect your own account").font(.headline)
@@ -255,23 +307,26 @@ struct SettingsView: View {
 
 @MainActor final class URLRouter: ObservableObject {
     static let shared = URLRouter()
-    @Published var url: URL?
+    @Published var url: URL? {
+        didSet {
+            guard let url else { return }
+            if url.host == "settings" { settings = true } else if url.host == "refresh" { refresh = true }
+        }
+    }
+    @Published var settings = false
+    @Published var refresh = false
 }
 
 struct WidgetLinks: ViewModifier {
-    @Environment(\.openSettings) private var openSettings
-    let model: UsageModel
+    @Environment(\.openWindow) private var openWindow
     func body(content: Content) -> some View {
         content.onOpenURL { URLRouter.shared.url = $0 }
-            .onReceive(URLRouter.shared.$url) { url in
-                guard let url else { return }
-                URLRouter.shared.url = nil
-                if url.host == "refresh" { model.refresh() }
-                else if url.host == "settings" {
-                    DispatchQueue.main.async {
-                        NSApp.activate(ignoringOtherApps: true)
-                        openSettings()
-                    }
+            .onReceive(URLRouter.shared.$settings) { requested in
+                guard requested else { return }
+                URLRouter.shared.settings = false
+                DispatchQueue.main.async {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "main")
                 }
             }
     }

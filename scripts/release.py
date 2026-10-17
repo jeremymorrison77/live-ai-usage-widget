@@ -18,7 +18,7 @@ def main():
     parser.add_argument('--notary-profile', required=True)
     parser.add_argument('--submission-id', help='Resume a previously submitted archive; never submit it twice')
     args = parser.parse_args()
-    app = ROOT / 'build/Live Usage Widget.app'
+    app = ROOT / 'build/Live AI Usage Widget.app'
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
     version = info['CFBundleShortVersionString']
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
@@ -46,7 +46,7 @@ def main():
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
     subprocess.run(['spctl', '--assess', '--type', 'execute', '--verbose=2', str(app)], check=True)
     output = ROOT / 'dist'; output.mkdir(exist_ok=True)
-    archive = output / ('Live-Usage-Widget-' + version + '-macOS-arm64.zip')
+    archive = output / ('Live-AI-Usage-Widget-' + version + '-macOS-arm64.zip')
     subprocess.run(['ditto', '-c', '-k', '--keepParent', str(app), str(archive)], check=True)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (output / (archive.name + '.sha256')).write_text(digest + '  ' + archive.name + '\n')

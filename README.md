@@ -1,26 +1,26 @@
-# Live Usage Widget
+# Live AI Usage Widget
 
-A macOS desktop widget for remaining Claude Code and ChatGPT/Codex coding allowances. Small, medium and large widgets share the companion app's Clean, Solar and Trends styles. Accounts and data stay on your own Mac.
+A macOS desktop widget that shows how much of your Claude Code and ChatGPT/Codex coding allowance is left. Small, medium and large widgets come in Clean (default), Solar and Trends styles. Accounts and data stay on your own Mac.
 
 <p align="center">
-  <img src="docs/images/trends-small.png" alt="Small widget, Trends style" width="200">
-  <img src="docs/images/trends-medium.png" alt="Medium widget, Trends style" width="380">
+  <img src="docs/images/clean-small.png" alt="Small widget, Clean style" width="200">
+  <img src="docs/images/clean-medium.png" alt="Medium widget, Clean style" width="380">
 </p>
 <p align="center">
-  <img src="docs/images/trends-large.png" alt="Large widget, Trends style" width="380">
+  <img src="docs/images/clean-large.png" alt="Large widget, Clean style" width="380">
 </p>
 
-| Clean | Solar |
+| Solar | Trends |
 | --- | --- |
-| <img src="docs/images/clean-medium.png" alt="Medium widget, Clean style" width="380"> | <img src="docs/images/solar-medium.png" alt="Medium widget, Solar style" width="380"> |
+| <img src="docs/images/solar-medium.png" alt="Medium widget, Solar style" width="380"> | <img src="docs/images/trends-medium.png" alt="Medium widget, Trends style" width="380"> |
 
-**Settings**
+**Setup window**
 
-<p align="center"><img src="docs/images/settings.png" alt="Settings window" width="420"></p>
+<p align="center"><img src="docs/images/settings.png" alt="Setup and settings window" width="420"></p>
 
 Pictures are drawn from the app's own views with made-up sample readings, not a real account.
 
-**0.2.1 beta.** Apple Silicon, macOS 14 or later. Signed download packaging is prepared; see the [validation record](docs/VALIDATION.md) for verified checks and remaining independent-Mac acceptance. This is not yet a broadly tested stable release.
+**0.3.0 beta.** Apple Silicon, macOS 14 or later. Signed download packaging is prepared; see the [validation record](docs/VALIDATION.md) for verified checks and remaining independent-Mac acceptance. This is not yet a broadly tested stable release.
 
 ## What works in this source
 
@@ -47,11 +47,11 @@ No provider binaries, Python runtime, credentials or private signing material ar
 ## Install the packaged beta
 
 1. Download the macOS arm64 ZIP from a published GitHub release and compare its SHA-256 checksum with the accompanying checksum file.
-2. Unzip it and drag **Live Usage Widget.app** into Applications. Open it normally. A notarized build should pass macOS Gatekeeper; do not disable security checks.
-3. Connect your provider tools in Settings as described below. Add the widget through macOS’s widget gallery (right-click the desktop → Edit Widgets).
+2. Unzip it and drag **Live AI Usage Widget.app** into Applications. Open it normally. A notarized build should pass macOS Gatekeeper; do not disable security checks.
+3. The setup window opens. Follow its three Get started steps: connect your accounts, add the widget to your desktop (right-click the desktop → Edit Widgets → search Live AI Usage), and optionally turn on Open at login.
 4. For updates, quit this app normally, replace it in Applications, and reopen it. Settings are retained. There is no automatic updater.
 
-Installation, launch, settings, all three gallery previews, official Claude sign-in, real readings and small desktop-widget repaint passed on a second Apple Silicon Mac. Browser-downloaded quarantine acceptance, reboot and natural credential renewal remain unverified.
+Version 0.2.1 installation, launch, settings, all three gallery previews, official Claude sign-in, real readings and small desktop-widget repaint passed on a second Apple Silicon Mac. Browser-downloaded quarantine acceptance, reboot and natural credential renewal remain unverified.
 
 ## Build and test
 
@@ -62,12 +62,12 @@ bash scripts/test.sh
 python3 scripts/build.py
 ```
 
-This produces a **compile-only** app in `build/Live Usage Widget.app`. It is not a signed installer. Nothing is installed, launched, registered at login or stopped by these commands.
+This produces a **compile-only** app in `build/Live AI Usage Widget.app`. It is not a signed installer. Nothing is installed, launched, registered at login or stopped by these commands.
 
 A maintainer with their own correctly configured signing identity can build using:
 
 ```sh
-python3 scripts/build.py --team-id YOURTEAMID --signing-identity 'Developer ID Application: YOUR NAME (YOURTEAMID)' --bundle-id com.yourcompany.usagewidget
+python3 scripts/build.py --team-id YOURTEAMID --signing-identity 'Developer ID Application: YOUR NAME (YOURTEAMID)' --bundle-id com.yourcompany.aiusagewidget
 ```
 
 Replace the example values. Configure the app group to match `TEAMID.BUNDLEID` in both targets and verify Apple's current signing/provisioning requirements. The script only applies supplied signing settings; it does not create accounts, entitlements or profiles. See [release checks](docs/RELEASE-CHECKLIST.md).
@@ -76,9 +76,9 @@ Replace the example values. Configure the app group to match `TEAMID.BUNDLEID` i
 
 1. Install the provider's official command-line tool using its own instructions. Finish its first-run setup in Terminal.
 2. Run `claude auth login` or `codex login` and complete the provider-owned authentication. Never paste credentials into this app.
-3. Open a properly signed build. In Settings select the providers you want and save. Connect → Sign in launches the official login command in Terminal; Check connection reads usage after sign-in.
+3. Open a properly signed build. In the setup window select the providers you want and save. Connect → Sign in launches the official login command in Terminal; Check connection reads usage after sign-in.
 4. Refresh. “Connected” appears only after a fresh successful usage reading. Authentication or usage rate limits can delay the next attempt by fifteen minutes.
-5. Add Live Usage Widget through macOS's widget gallery. Enable “Open at login” if wanted. Keep the app running; closing its window is fine, quitting stops collection.
+5. Add Live AI Usage Widget through macOS's widget gallery (the window's Show me how button explains it; macOS doesn't let apps place widgets themselves). Enable “Open at login” if wanted. Keep the app running; closing its window is fine, quitting stops collection. Reopen the window from the Dock, with Command-comma, or with the widget's gear button.
 
 Before changing accounts, turn off that provider and save. This clears widget history and invalidates the collector cache. Then sign into the new account, enable the provider and save again. Account changes made outside this workflow cannot be reliably detected because the collector intentionally does not retain account identities.
 

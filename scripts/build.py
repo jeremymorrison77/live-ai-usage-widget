@@ -14,7 +14,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--team-id')
     parser.add_argument('--signing-identity')
-    parser.add_argument('--bundle-id', default='com.liveusagewidget.app')
+    parser.add_argument('--bundle-id', default='com.liveaiusagewidget.app')
     parser.add_argument('--arch', choices=['arm64', 'x86_64'], default='arm64')
     args = parser.parse_args()
     if bool(args.team_id) != bool(args.signing_identity):
@@ -24,7 +24,7 @@ def main():
     if args.team_id and not re.fullmatch(r'[A-Z0-9]{10}', args.team_id):
         parser.error('Invalid team identifier')
     build = ROOT / 'build'
-    app = build / 'Live Usage Widget.app'
+    app = build / 'Live AI Usage Widget.app'
     if app.exists():
         shutil.rmtree(app)
     extension = app / 'Contents/PlugIns/UsageWidget.appex'
@@ -33,13 +33,13 @@ def main():
         folder.mkdir(parents=True, exist_ok=True)
     for folder, executable, bundle, kind in [(app, 'UsageWidget', args.bundle_id, 'APPL'),
                                             (extension, 'UsageWidgetExtension', args.bundle_id + '.widget', 'XPC!')]:
-        info = dict(CFBundleDisplayName='Live Usage Widget', CFBundleName='Live Usage Widget', CFBundleExecutable=executable,
-                    CFBundleIdentifier=bundle, CFBundlePackageType=kind, CFBundleVersion='3',
-                    CFBundleShortVersionString='0.2.1', LSMinimumSystemVersion='14.0', UsageAppGroup=group)
+        info = dict(CFBundleDisplayName='Live AI Usage Widget', CFBundleName='Live AI Usage Widget', CFBundleExecutable=executable,
+                    CFBundleIdentifier=bundle, CFBundlePackageType=kind, CFBundleVersion='4',
+                    CFBundleShortVersionString='0.3.0', LSMinimumSystemVersion='14.0', UsageAppGroup=group)
         if kind == 'XPC!':
             info['NSExtension'] = {'NSExtensionPointIdentifier': 'com.apple.widgetkit-extension'}
         else:
-            info.update(CFBundleIconFile='LiveUsageWidget.icns', NSPrincipalClass='NSApplication', CFBundleURLTypes=[{'CFBundleURLSchemes': ['usage-widget']}])
+            info.update(CFBundleIconFile='LiveAIUsageWidget.icns', NSPrincipalClass='NSApplication', CFBundleURLTypes=[{'CFBundleURLSchemes': ['live-ai-usage-widget']}])
         (folder / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
         entitlement = {'com.apple.security.application-groups': [group]}
         if kind == 'XPC!':
@@ -57,8 +57,8 @@ def main():
                     '-o', str(folder / 'Contents/MacOS' / executable)]
         subprocess.run(command, check=True)
     subprocess.run(['xcrun', 'swiftc', '-parse-as-library', '-module-cache-path', str(build / 'module-cache'), str(ROOT / 'Tools/RenderIcon.swift'), '-o', str(build / 'render-icon')], check=True)
-    subprocess.run([str(build / 'render-icon'), str(build / 'LiveUsageWidget.iconset')], check=True)
-    subprocess.run(['iconutil', '-c', 'icns', str(build / 'LiveUsageWidget.iconset'), '-o', str(app / 'Contents/Resources/LiveUsageWidget.icns')], check=True)
+    subprocess.run([str(build / 'render-icon'), str(build / 'LiveAIUsageWidget.iconset')], check=True)
+    subprocess.run(['iconutil', '-c', 'icns', str(build / 'LiveAIUsageWidget.iconset'), '-o', str(app / 'Contents/Resources/LiveAIUsageWidget.icns')], check=True)
     if args.signing_identity:
         for folder, executable in [(extension, 'UsageWidgetExtension'), (app, 'UsageWidget')]:
             subprocess.run(['codesign', '--force', '--options', 'runtime', '--timestamp', '--sign', args.signing_identity,

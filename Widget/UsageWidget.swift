@@ -33,7 +33,7 @@ struct WidgetView: View {
 struct UsageWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: StatusStore.kind, provider: Provider()) { WidgetView(entry: $0) }
-            .configurationDisplayName("Live Usage Widget")
+            .configurationDisplayName("Live AI Usage Widget")
             .description("Claude and ChatGPT coding usage remaining. Old readings are marked.")
             .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }

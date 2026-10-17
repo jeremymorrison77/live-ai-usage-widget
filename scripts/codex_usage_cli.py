@@ -96,7 +96,7 @@ def fetch(timeout=15, binary=None):
             cwd='/private/tmp', stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, start_new_session=True, bufsize=0)
         send({'id': 0, 'method': 'initialize', 'params': {'clientInfo': {
-            'name': 'usage_widget', 'title': 'Live Usage Widget', 'version': '1.0'}}})
+            'name': 'live_ai_usage_widget', 'title': 'Live AI Usage Widget', 'version': '1.0'}}})
         while time.monotonic() - started < timeout:
             if not select.select([process.stdout], [], [], min(0.2, max(0, timeout - (time.monotonic() - started))))[0]:
                 continue

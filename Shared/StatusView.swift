@@ -126,10 +126,10 @@ struct TrendsStatusView: View {
             Text(failed ? (status?.usageFailureText() ?? "Failed to load") : (compact ? "" : "Last refresh ") + WidgetStatus.updateDateLabel(status?.usageObservedAt))
                 .lineLimit(1).minimumScaleFactor(0.8)
             Spacer(minLength: 2)
-            Link(destination: URL(string: "usage-widget://refresh")!) { Image(systemName: "arrow.clockwise") }
+            Link(destination: URL(string: "live-ai-usage-widget://refresh")!) { Image(systemName: "arrow.clockwise") }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Refresh widget")
-            Link(destination: URL(string: "usage-widget://settings")!) { Image(systemName: "gearshape") }
+            Link(destination: URL(string: "live-ai-usage-widget://settings")!) { Image(systemName: "gearshape") }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Open settings")
         }.font(.system(size: 10)).foregroundStyle(.secondary)

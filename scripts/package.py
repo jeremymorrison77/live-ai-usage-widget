@@ -34,10 +34,10 @@ def main():
         contents[name] = data
     destination = ROOT / 'dist'
     destination.mkdir(exist_ok=True)
-    archive = destination / 'live-usage-widget-0.2.1-source.zip'
+    archive = destination / 'live-ai-usage-widget-0.3.0-source.zip'
     with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as output:
         for name, data in sorted(contents.items()):
-            info = zipfile.ZipInfo('live-usage-widget/' + name, date_time=(2026, 1, 1, 0, 0, 0))
+            info = zipfile.ZipInfo('live-ai-usage-widget/' + name, date_time=(2026, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             output.writestr(info, data)

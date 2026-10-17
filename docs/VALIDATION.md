@@ -1,5 +1,9 @@
 # Validation record
 
+## 0.3.0 (build 4) — 10/17/2026
+
+Rename and setup-window change. Python reference, Swift history/store and native reader tests pass; compile-only and signed builds pass. Apple notarization submission bbbafbb3-d476-4251-bedc-768648c2ebba Accepted; stapled, strict signature and Gatekeeper pass. App ZIP SHA-256: 39f5c583ffd08d1b59030b96c8855b3647ed8de93b0ce18e081ae739f82b7a3f. The signed app opened its setup window on launch on the development Mac. Not yet checked for 0.3.0: second-Mac install, widget placement detection on a real desktop, gear/refresh links with the window closed, and everything still listed in RELEASE-CHECKLIST. Entries below describe 0.2.x under the earlier name.
+
 October 17, 2026, macOS Apple Silicon, 0.2.0 beta candidate:
 
 - Companion and WidgetKit extension compile targeting macOS 14; both signed with Developer ID and hardened runtime.
