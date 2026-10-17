@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+
+The Connect window is clearer and can be closed (Cancel or Escape). It notices when Claude Code or Codex is already installed and skips that step; otherwise it offers Install for me (Claude, runs the official installer in Terminal) or a link. Sign in and Finish setup open Terminal and run the command for you. Removed the extra note under Check every.
+
 ## 1.0.0
 
 First full release. Includes everything below from 0.3.1 (never released separately):

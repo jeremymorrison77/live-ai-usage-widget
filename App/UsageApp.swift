@@ -55,6 +55,18 @@ import Combine
             message = "Finish signing in in Terminal, then choose Check connection."
         } catch { message = "That app's command-line tool isn't installed. Use Install official tool first." }
     }
+    func installClaude() {
+        do {
+            let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            let script = root.appendingPathComponent("install-claude.command")
+            // Claude's official native installer, run visibly in Terminal so the user sees every step.
+            try "#!/bin/sh\ncurl -fsSL https://claude.ai/install.sh | bash\necho\necho 'Done. Close this window and choose Sign in.'\n".write(to: script, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
+            NSWorkspace.shared.open(script)
+            message = "Installing Claude Code in Terminal. When it finishes, choose Sign in."
+        } catch { message = "Couldn't start the installer. Use the Install the official tool link instead." }
+    }
     func finishClaudeSetup() {
         do {
             let binary = try UsageReader.find("claude")
@@ -277,7 +289,6 @@ struct SettingsView: View {
                     Stepper("", value: $model.settings.refreshMinutes, in: 1...1440).labelsHidden()
                     Text(model.settings.refreshMinutes == 1 ? "minute" : "minutes")
                 }
-                Text("Default is 5 minutes. After a failed check the app waits at least 15 minutes. Save settings to apply.").font(.caption).foregroundStyle(.secondary)
             }
             if !metricChoices.isEmpty {
             Section("Small widget readings") {
@@ -319,26 +330,52 @@ struct SettingsView: View {
                 }.padding(24).frame(width: 400)
             }
             .sheet(item: Binding(get: { login.map(Login.init) }, set: { login = $0?.id })) { item in
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Connect your own account").font(.headline)
-                    Text("Install the official tool, then run this command in Terminal and complete its sign-in:")
-                    Text(item.id == "claude" ? "claude auth login" : "codex login").font(.system(.body, design: .monospaced)).textSelection(.enabled)
+                let claude = item.id == "claude"
+                let name = claude ? "Claude" : "ChatGPT"
+                // Skip the install step when the official tool is already on this Mac.
+                let installed = (try? UsageReader.find(item.id)) != nil
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Connect " + name).font(.headline)
+                        Text("Uses your own account through the official " + (claude ? "Claude Code" : "Codex") + " tool. Nothing is typed into this app.").font(.caption).foregroundStyle(.secondary)
+                    }
                     if let reason = model.status?.usage?[item.id]?.refresh?.failureReason {
-                        Text(reason.actionLabel(agent: item.id == "claude" ? "Claude" : "ChatGPT")).foregroundStyle(.orange)
+                        Text(reason.actionLabel(agent: name)).foregroundStyle(.orange)
                     }
-                    if item.id == "claude" {
-                        Text("Requires Claude Code 2.1.301 or newer. Run claude update if needed. Finish setup opens only the widget working folder; approve its trust prompt there, then close that Terminal window.").font(.caption)
-                        Button("Finish Claude setup") { model.finishClaudeSetup(); login = nil }
+                    if installed {
+                        connectRow(1, done: true, title: (claude ? "Claude Code" : "Codex") + " is installed", detail: "Found on this Mac. Nothing to install.") { EmptyView() }
+                    } else {
+                        connectRow(1, title: "Install the official tool",
+                                   detail: claude ? "Not found on this Mac. Install for me opens Terminal and runs Claude's official installer." : "Not found on this Mac. Install Codex, or the ChatGPT desktop app, which includes it.",
+                                   link: claude ? "https://code.claude.com/docs/en/setup" : "https://learn.chatgpt.com/docs/codex/cli#getting-started") {
+                            if claude { Button("Install for me") { model.installClaude() } }
+                        }
                     }
-                    Text("After sign-in and setup, choose Check connection. A green check appears only after fresh usage is received.").font(.caption)
-                    HStack {
-                        Link("Install official tool", destination: URL(string: item.id == "claude" ? "https://code.claude.com/docs/en/setup" : "https://developers.openai.com/codex/cli/")!)
-                        Spacer()
-                        Button("Sign in") { model.connect(item.id); login = nil }
-                        Button("Check connection") { login = nil; model.checkConnection() }
+                    connectRow(2, title: "Sign in", detail: "Opens Terminal and starts the official sign-in for you. Finish it in your browser.") {
+                        Button("Sign in") { model.connect(item.id) }
                     }
-                }.padding(24).frame(width: 400)
+                    if claude {
+                        connectRow(3, title: "Finish setup", detail: "Opens Terminal once so Claude Code can trust the widget's folder. Approve it, then close that Terminal window.") {
+                            Button("Finish setup") { model.finishClaudeSetup() }
+                        }
+                    }
+                    connectRow(claude ? 4 : 3, title: "Check connection", detail: "A green check appears once a fresh reading arrives.") {
+                        Button("Check connection") { login = nil; model.checkConnection() }.keyboardShortcut(.defaultAction)
+                    }
+                    HStack { Spacer(); Button("Cancel") { login = nil }.keyboardShortcut(.cancelAction) }
+                }.padding(24).frame(width: 460)
             }
+    }
+    private func connectRow<Action: View>(_ number: Int, done: Bool = false, title: String, detail: String, link: String? = nil, @ViewBuilder action: () -> Action) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle").foregroundStyle(done ? Color.green : Color.secondary).font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                if let link, let url = URL(string: link) { Link(title, destination: url).fontWeight(.medium) } else { Text(title).fontWeight(.medium) }
+                Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            action()
+        }
     }
     private func percentField(_ value: Double, set: @escaping (Double) -> Void) -> some View {
         PercentField(value: value, commit: set)
