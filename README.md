@@ -4,21 +4,7 @@ A macOS desktop widget that shows how much of your Claude Code and ChatGPT/Codex
 
 **[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.0.0-macOS-arm64.zip)** · version 1.0.0 · macOS 14 or later · M1 or newer
 
-<table>
-<tr>
-<td valign="top" width="200"><img src="docs/images/settings.png" alt="Settings window" width="180"></td>
-<td valign="top">
-<img src="docs/images/clean-medium.png" alt="Medium widget, Clean style" width="360"><br>
-<img src="docs/images/solar-medium.png" alt="Medium widget, Solar style" width="360"><br>
-<img src="docs/images/trends-medium.png" alt="Medium widget, Trends style" width="360">
-</td>
-</tr>
-</table>
-
-<p align="center">
-  <img src="docs/images/clean-small.png" alt="Small widget" width="190">
-  <img src="docs/images/clean-large.png" alt="Large widget" width="380">
-</p>
+<p align="center"><img src="docs/images/overview.png" alt="Settings window and the widget in all sizes and styles" width="100%"></p>
 
 Pictures are drawn from the app's own views with made-up sample readings, not a real account.
 
