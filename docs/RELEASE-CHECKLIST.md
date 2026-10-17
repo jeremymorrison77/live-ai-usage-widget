@@ -17,7 +17,7 @@ Version 1.0.0. A signed, notarized Apple Silicon ZIP is prepared. Notarization e
 ## Publication and follow-up checks
 
 - [x] Review the exact allowlisted source and app artifacts before upload.
-- [x] Create the repository (live-ai-usage-widget, private for now) and run its CI. Enable private vulnerability reporting if it is made public. Never publish a containing private project or its history.
+- [x] Create the repository (live-ai-usage-widget, public since 10/17/2026), run its CI and enable private vulnerability reporting. Never publish a containing private project or its history.
 - [x] Confirm desktop widget gallery registration and actual timeline rendering on a separate Mac (small widget, 10/17/2026). Medium/large actual desktop placement still needs review.
 - [ ] Test a downloaded archive on a separate Apple Silicon Mac or fresh macOS user: Claude alone, ChatGPT alone, both and neither; missing tools and first-run sign-in.
 - [ ] Verify US/EU dates, all styles/sizes, color controls, macOS full-color/tinted appearance and accessibility in installed widgets.

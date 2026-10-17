@@ -1,6 +1,6 @@
 # Maintainer handoff
 
-Current version: **1.0.0 (build 10), Apple Silicon, macOS 14+**, published as a full GitHub release. This repository is the whole project; it has no parent workspace.
+Current version: **1.0.0 (build 10), Apple Silicon, macOS 14+**, published as a full GitHub release in the public repository. This repository is the whole project; it has no parent workspace.
 
 ## Current state
 
