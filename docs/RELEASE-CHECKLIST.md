@@ -1,6 +1,6 @@
 # Release acceptance
 
-Version 0.3.0 beta. A signed, notarized Apple Silicon ZIP is prepared. Notarization establishes Apple's distribution check, not compatibility with every account or Mac.
+Version 0.3.1 beta. A signed, notarized Apple Silicon ZIP is prepared. Notarization establishes Apple's distribution check, not compatibility with every account or Mac.
 
 ## Verified locally
 

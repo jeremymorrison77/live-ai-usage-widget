@@ -1,5 +1,9 @@
 # Validation record
 
+## 0.3.1 (build 5) — 10/17/2026
+
+Get started hides once all three steps are done, with a Setup help link. Tests, signed build and notarization pass (submission 6fc9f8c5-140e-41b4-8821-39b103f9a8f3 Accepted). App ZIP SHA-256: 33da57f2aa4a68d177b928875ab5f55049e86e30ec202b8317006cc9f6f579d4. Remaining limits match 0.3.0 below.
+
 ## 0.3.0 (build 4) — 10/17/2026
 
 Rename and setup-window change. Python reference, Swift history/store and native reader tests pass; compile-only and signed builds pass. Apple notarization submission bbbafbb3-d476-4251-bedc-768648c2ebba Accepted; stapled, strict signature and Gatekeeper pass. App ZIP SHA-256: 39f5c583ffd08d1b59030b96c8855b3647ed8de93b0ce18e081ae739f82b7a3f. The signed app opened its setup window on launch on the development Mac. Not yet checked for 0.3.0: second-Mac install, widget placement detection on a real desktop, gear/refresh links with the window closed, and everything still listed in RELEASE-CHECKLIST. Entries below describe 0.2.x under the earlier name.

@@ -139,6 +139,9 @@ struct SettingsView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var widgetsPlaced: Int?
     @State private var showWidgetHelp = false
+    @State private var showSetupHelp = false
+    // Get started hides itself once every step is done; Setup help brings it back.
+    private var setupDone: Bool { anyConnected && (widgetsPlaced ?? 0) > 0 && launchAtLogin }
     private var anyConnected: Bool {
         model.settings.enabled.contains { model.status?.usage?[$0]?.refresh?.status == .ok && model.status?.usage?[$0]?.isStale(at: Date()) == false }
     }
@@ -157,6 +160,7 @@ struct SettingsView: View {
     }
     var body: some View {
         Form {
+            if !setupDone || showSetupHelp {
             Section {
                 HStack {
                     step(1, "Turn on Claude, ChatGPT or both, then connect", done: anyConnected)
@@ -178,6 +182,7 @@ struct SettingsView: View {
                 }
                 Text("You can close this window. The widget keeps updating while the app is running. Reopen this window from the Dock or the widget's gear button.").font(.caption).foregroundStyle(.secondary)
             } header: { Text("Get started") }
+            }
             Section("Accounts") {
                 ForEach(["claude", "codex"], id: \.self) { provider in
                     HStack {
@@ -242,6 +247,10 @@ struct SettingsView: View {
 
             Button("Save settings") { model.save(); model.refresh() }
             Text(model.message).font(.caption)
+            if setupDone {
+                Button(showSetupHelp ? "Hide setup help" : "Setup help") { showSetupHelp.toggle() }
+                    .buttonStyle(.link).font(.caption)
+            }
         }.formStyle(.grouped).frame(width: 520, height: 720)
             .onAppear { checkWidgets() }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in checkWidgets() }
