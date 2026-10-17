@@ -2,7 +2,7 @@
 
 ## 1.0.1
 
-The Connect window is clearer and can be closed (Cancel or Escape). It notices when Claude Code or Codex is already installed and skips that step; otherwise it offers Install for me (Claude, runs the official installer in Terminal) or a link. Sign in and Finish setup open Terminal and run the command for you. Removed the extra note under Check every.
+Connecting no longer needs Terminal. The Connect window shows three steps and can be closed with Cancel or Escape. Install shows a green check when Claude Code or Codex is already on the Mac; otherwise it installs the official tool in the background. Sign in opens the browser for both Claude and ChatGPT and checks the connection when done. Check connection answers Claude Code's one-time folder-trust question for the app's own empty folder. Removed the extra note under Check every.
 
 ## 1.0.0
 

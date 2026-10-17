@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.0.1 (build 14) — 10/17/2026
+
+Terminal-free connect flow. Tests, signed build and notarization pass (submission 8da8a2bc-259e-4e85-8d49-c1059463c571 Accepted; app ZIP SHA-256 05d8853e4fc1a605d9c6931434a731af71d48b350873a2460287f5b0594a1d36). On the development Mac the owner completed ChatGPT browser sign-in through the new flow. Long-term sign-in renewal is still unverified.
+
 ## 1.0.0 (build 10) — 10/17/2026
 
 Same app as 0.3.1 build 9 below with the version set to 1.0.0; re-signed and re-notarized (submission 0f38362b-858a-44d6-9b3e-06d62ba8d039 Accepted; app ZIP SHA-256 c9f9b66b046ee8e4c49e51138200128883eff2899b7a066d8466c5d60c9151df). Tests and stapled/Gatekeeper checks pass.

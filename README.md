@@ -2,13 +2,13 @@
 
 A macOS desktop widget that shows how much of your Claude Code and ChatGPT/Codex usage limits are left. Small, medium and large widgets come in Clean (default), Solar and Trends styles. Accounts and data stay on your own Mac.
 
-**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.0.0-macOS-arm64.zip)** · version 1.0.0 · macOS 14 or later · M1 or newer
+**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.0.1-macOS-arm64.zip)** · version 1.0.1 · macOS 14 or later · M1 or newer
 
 <p align="center"><img src="docs/images/overview.png" alt="Settings window and the widget in all sizes and styles" width="100%"></p>
 
 Pictures are drawn from the app's own views with made-up sample readings, not a real account.
 
-**Version 1.0.0.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
+**Version 1.0.1.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
 
 ## Download and install
 
@@ -25,7 +25,7 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line) wi
 2. Add the widget to your desktop: right-click an empty spot on the desktop, choose Edit Widgets, search for Live AI Usage Widget, pick a size and drag it on. macOS doesn't let apps place widgets themselves. Show me how walks through it, and the step turns green once a widget is placed.
 3. Turn on Open at login so it keeps running.
 
-**Accounts.** Check Claude, ChatGPT or both. Connect opens a sheet with Sign in (runs the official sign-in in Terminal), Finish Claude setup and Check connection. "Connected" appears only after a fresh reading.
+**Accounts.** Check Claude, ChatGPT or both, then Connect. The Connect window shows three steps, with no Terminal needed: Install (a green check if the official tool is already on your Mac, otherwise one click installs it in the background), Sign in (opens your browser) and Check connection. "Connected" appears only after a fresh reading. Cancel or Escape closes it.
 
 **Appearance.** Style: Clean (default), Solar or Trends. Date format: US or European. Usage colors on or off, with three color bands you can recolor and re-threshold (30% or more remaining, 11–29%, 10% or less by default).
 
@@ -74,11 +74,12 @@ Replace the example values. Configure the app group to match `TEAMID.BUNDLEID` i
 
 ## Set up your accounts
 
-1. Install the provider's official command-line tool using its own instructions. Finish its first-run setup in Terminal.
-2. Run `claude auth login` or `codex login` and complete the provider-owned authentication. Never paste credentials into this app.
-3. Open the app. In the setup window select the providers you want and save. Connect → Sign in launches the official login command in Terminal; Check connection reads usage after sign-in.
-4. “Connected” appears only after a fresh successful usage reading. Sign-in or rate-limit failures can delay the next attempt by fifteen minutes.
-5. Add the widget and turn on Open at login as described above. Keep the app running; closing its window is fine, quitting stops checks.
+1. In the setup window, check Claude, ChatGPT or both and choose Connect.
+2. Install: if the official Claude Code or Codex tool isn't on your Mac, Install downloads it in the background (Claude's official installer, or OpenAI's signed Codex release for Apple Silicon).
+3. Sign in: opens your browser to sign in to your own account. The app never sees your password. If the browser doesn't open, an "Open sign-in page" link appears.
+4. Check connection: reads your usage. For Claude it also answers Claude Code's one-time "trust this folder" question, only for the app's own empty working folder.
+
+Each tool keeps and renews its own sign-in; the app only asks it for the numbers.
 
 Before changing accounts, turn off that provider and save. This clears widget history and invalidates the collector cache. Then sign into the new account, enable the provider and save again. Account changes made outside this workflow cannot be reliably detected because the collector intentionally does not retain account identities.
 
@@ -96,4 +97,3 @@ This is independent software, not an Anthropic or OpenAI product. Provider names
 
 Released under the [MIT License](LICENSE). See [third-party notices](THIRD-PARTY-NOTICES.md).
 
-Claude first-run setup: after sign-in, use **Finish Claude setup** in the connection sheet to approve the widget working folder in Terminal. Close that Terminal window, then choose **Check connection**. Older CLI versions are reported as needing an update, not as network timeouts.
