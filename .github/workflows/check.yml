@@ -1,0 +1,15 @@
+name: Check source
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: bash scripts/test.sh
+      - name: Compile only
+        run: python3 scripts/build.py
+      - name: Verify source export
+        run: python3 scripts/package.py

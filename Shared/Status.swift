@@ -1,0 +1,386 @@
+import Foundation
+import Darwin
+
+struct UsageWindow: Codable {
+    let window: String
+    let usedPercent: Double
+    let resetsAt: Date?
+}
+
+/// Only provider observations, never publication times or interpolated samples.
+struct UsageObservation: Codable {
+    let date: Date
+    let usedPercent: Double
+    let resetsAt: Date?
+}
+
+struct UsageActivity: Equatable {
+    let start: Date
+    let end: Date
+    let percentagePoints: Double
+    var perMinute: Double { percentagePoints / (end.timeIntervalSince(start) / 60) }
+}
+
+enum UsageHistory {
+    static let span: TimeInterval = 6 * 3600
+    static let maximumGap: TimeInterval = 12 * 60
+    static let maximumPoints = 121
+    static func key(_ agent: String, _ window: String) -> String { agent + ":" + window }
+
+    static func recording(_ old: [String: [UsageObservation]], usage: [String: AgentUsage],
+                          at now: Date) -> [String: [UsageObservation]] {
+        var result: [String: [UsageObservation]] = [:]
+        for agent in ["claude", "codex"] {
+            for name in Set((usage[agent]?.windows.map(\.window) ?? []) + old.keys.filter { $0.hasPrefix(agent + ":") }.map { String($0.dropFirst(agent.count + 1)) }).sorted().prefix(8) {
+                let id = key(agent, name)
+                var samples = (old[id] ?? []).filter {
+                    $0.date <= now && now.timeIntervalSince($0.date) <= span + maximumGap &&
+                    $0.usedPercent.isFinite && (0...100).contains($0.usedPercent)
+                }.sorted { $0.date < $1.date }
+                if let source = usage[agent], let observed = source.observedAt,
+                   observed <= now, now.timeIntervalSince(observed) <= span,
+                   let window = source.windows.first(where: { $0.window == name }),
+                   window.usedPercent.isFinite, (0...100).contains(window.usedPercent),
+                   observed > (samples.last?.date ?? .distantPast) {
+                    // Same-minute receipts replace each other, keeping storage bounded without inventing points.
+                    if let last = samples.last,
+                       Int(last.date.timeIntervalSince1970 / 60) == Int(observed.timeIntervalSince1970 / 60) {
+                        samples.removeLast()
+                    }
+                    samples.append(UsageObservation(date: observed, usedPercent: window.usedPercent, resetsAt: window.resetsAt))
+                }
+                if !samples.isEmpty { result[id] = Array(samples.suffix(maximumPoints)) }
+            }
+        }
+        return result
+    }
+
+    static func activity(_ samples: [UsageObservation], at now: Date) -> [UsageActivity] {
+        zip(samples, samples.dropFirst()).compactMap { before, after in
+            let elapsed = after.date.timeIntervalSince(before.date)
+            // Do not bridge a reset, counter correction, missing reset identity, long outage or future clock.
+            guard elapsed >= 30, elapsed <= maximumGap, after.date <= now,
+                  before.date >= now.addingTimeInterval(-span),
+                  let reset = before.resetsAt, let nextReset = after.resetsAt,
+                  abs(reset.timeIntervalSince(nextReset)) <= 90,
+                  before.date < reset, after.date < reset,
+                  after.usedPercent.isFinite, before.usedPercent.isFinite,
+                  (0...100).contains(before.usedPercent), (0...100).contains(after.usedPercent),
+                  after.usedPercent >= before.usedPercent else { return nil }
+            return UsageActivity(start: before.date, end: after.date,
+                                 percentagePoints: after.usedPercent - before.usedPercent)
+        }
+    }
+}
+
+/// Refresh attempts have their own clock; a failed attempt never makes cached usage look current.
+enum UsageRefreshStatus: String, Codable { case ok, failed, unknown }
+
+enum UsageFailureReason: String, Codable {
+    case cliUpdateRequired = "cli_update_required"
+    case signInRequired = "sign_in_required"
+    case interactiveSetupRequired = "interactive_setup_required"
+    case rateLimited = "rate_limited"
+    case usageReadTimedOut = "usage_read_timed_out"
+    case usagePanelIncomplete = "usage_panel_incomplete"
+    case resetFormatChanged = "reset_format_changed"
+    case resetOutOfRange = "reset_out_of_range"
+    case invalidUsage = "invalid_usage"
+    case terminalBounds = "terminal_bounds"
+    case outputTooLarge = "output_too_large"
+    case probeDirectoryUnavailable = "probe_directory_unavailable"
+    case snapshotWriteFailed = "snapshot_write_failed"
+    case unavailable
+
+    func actionLabel(agent: String) -> String {
+        switch self {
+        case .cliUpdateRequired: return "Update \(agent) command-line tool"
+        case .signInRequired: return "Sign in to \(agent)"
+        case .interactiveSetupRequired: return "Open \(agent) to finish setup"
+        case .rateLimited: return "Rate limited · will retry"
+        case .usageReadTimedOut: return "Timed out · will retry"
+        default: return "Will retry automatically"
+        }
+    }
+}
+
+struct UsageRefresh: Codable {
+    let status: UsageRefreshStatus
+    let lastAttemptAt: Date?
+    let lastSuccessAt: Date?
+    let lastFailureAt: Date?
+    let failureReason: UsageFailureReason?
+}
+
+struct AgentUsage: Codable {
+    let observedAt: Date?
+    let windows: [UsageWindow]
+    var refresh: UsageRefresh? = nil
+    static let staleAfter: TimeInterval = 45 * 60
+
+    func isStale(at date: Date) -> Bool {
+        guard let observedAt else { return true }
+        return date.timeIntervalSince(observedAt) >= AgentUsage.staleAfter || observedAt.timeIntervalSince(date) > 30
+    }
+    static func resetLabel(_ reset: Date, at date: Date, calendar: Calendar = .current) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        // Same day: time only. Within the next six days: weekday. A week or more away (a weekly reset lands on
+        // today's weekday) : month/day, so "Sun 5:16 AM" never reads as already past.
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: reset)).day ?? 0
+        let clock = WidgetSettings.load().usDates ? "h:mm a" : "HH:mm"
+        formatter.dateFormat = days == 0 ? clock : days < 7 ? "EEE " + clock : (WidgetSettings.load().usDates ? "M/d " : "d/M ") + clock
+        return formatter.string(from: reset)
+    }
+    /// Small-widget name: "weekly all" and "weekly" become "week"; "weekly Fable" stays as is.
+    static func compactName(_ name: String) -> String {
+        name.replacingOccurrences(of: "weekly all", with: "week").replacingOccurrences(of: "weekly", with: "week")
+    }
+    /// Plain-words summary, e.g. "5-hour 42% used · weekly 10% used". Without resets (small widget) only the
+    /// first two windows are shown, so Claude reads "5-hour 9% · week 94%" and the Fable line waits for the medium size.
+    func summary(at date: Date, withResets: Bool, calendar: Calendar = .current) -> String {
+        let shown = withResets ? windows : Array(windows.prefix(2))
+        let parts = shown.map { window -> String in
+            var text = "\(withResets ? window.window : AgentUsage.compactName(window.window)) \(Int(window.usedPercent.rounded()))%\(withResets ? " used" : "")"
+            if withResets, let reset = window.resetsAt, reset > date {
+                text += ", resets \(AgentUsage.resetLabel(reset, at: date, calendar: calendar))"
+            }
+            return text
+        }
+        let joined = parts.isEmpty ? "unavailable" : parts.joined(separator: " · ")
+        return isStale(at: date) ? joined + " (old reading)" : joined
+    }
+}
+
+/// How much of a limit is left, graded the same way for Claude and Codex.
+/// `critical` (5% left) is Claude Code's own "approaching your usage limit" point: Claude Code 2.1.280 checkpoints the
+/// session at utilization 0.95 (0.99 on Max 5x, 0.9975 on Max 20x). Claude's own usage bars have no separate
+/// warning tint, so `warning` (20% left) is this project's choice, not a confirmed Claude threshold.
+enum UsageLevel: Equatable {
+    case normal, warning, critical
+    static let warningLeftPercent: Double = 20
+    static let criticalLeftPercent: Double = 5
+    static func grade(leftPercent: Double) -> UsageLevel {
+        if leftPercent <= criticalLeftPercent { return .critical }
+        if leftPercent <= warningLeftPercent { return .warning }
+        return .normal
+    }
+    /// Plain word shown beside the percent so the state reads without color (desktop widgets are tinted).
+    var word: String? {
+        switch self {
+        case .normal: return nil
+        case .warning: return "low"
+        case .critical: return "almost out"
+        }
+    }
+}
+
+extension UsageWindow {
+    /// Bar-row name in plain words: "Session" (5-hour), "Weekly" (weekly / weekly all), "Fable" (weekly Fable).
+    var displayName: String {
+        switch window {
+        case "5-hour": return "Session"
+        case "weekly", "weekly all": return "Weekly"
+        case "weekly Fable": return "Fable"
+        default: return window
+        }
+    }
+    var leftPercent: Double { min(max(100 - usedPercent, 0), 100) }
+    var leftLabel: String { "\(Int(leftPercent.rounded()))% left" }
+    /// Filled share of the bar: what is left.
+    var leftFraction: Double { leftPercent / 100 }
+    var level: UsageLevel { UsageLevel.grade(leftPercent: leftPercent) }
+    func resetText(at date: Date, calendar: Calendar = .current) -> String? {
+        guard let resetsAt, resetsAt > date else { return nil }
+        return "resets " + AgentUsage.resetLabel(resetsAt, at: date, calendar: calendar)
+    }
+}
+
+struct WidgetStatus: Codable {
+    var usage: [String: AgentUsage]? = nil
+    var usageHistory: [String: [UsageObservation]]? = nil
+    static let preview = WidgetStatus()
+    // Usage freshness is independent of recording and health publication.
+    var usageObservedAt: Date? {
+        ["claude", "codex"].compactMap { usage?[$0]?.observedAt }.min()
+    }
+    /// Only an explicit failed attempt is a failure. Old cache files have no such evidence.
+    var usageFailure: (agent: String, refresh: UsageRefresh)? {
+        ["claude", "codex"].compactMap { key -> (agent: String, refresh: UsageRefresh)? in
+            guard let refresh = usage?[key]?.refresh, refresh.status == .failed else { return nil }
+            return (key == "claude" ? "Claude" : "Codex", refresh)
+        }.max { ($0.refresh.lastFailureAt ?? $0.refresh.lastAttemptAt ?? .distantPast) <
+            ($1.refresh.lastFailureAt ?? $1.refresh.lastAttemptAt ?? .distantPast) }
+    }
+    static func updateDateLabel(_ date: Date?, calendar: Calendar = .current) -> String {
+        guard let date else { return "time unknown" }
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = WidgetSettings.load().usDates ? "M/d h:mm a" : "d/M HH:mm"
+        return formatter.string(from: date)
+    }
+    func usageFailureText(calendar: Calendar = .current) -> String? {
+        guard let failure = usageFailure else { return nil }
+        return "Failed last update " + Self.updateDateLabel(failure.refresh.lastFailureAt ?? failure.refresh.lastAttemptAt, calendar: calendar)
+    }
+    func usageLastSuccessText(compact: Bool = false, calendar: Calendar = .current) -> String? {
+        guard let failure = usageFailure else { return nil }
+        let candidates = [failure.refresh.lastSuccessAt, usage?[failure.agent.lowercased()]?.observedAt].compactMap { $0 }
+        guard !candidates.isEmpty else { return compact ? "No successful update yet" : "Last successful update: none yet" }
+        let lastSuccess = candidates.filter { $0 <= Date().addingTimeInterval(30) }.max()
+        return (compact ? "Last OK " : "Last successful update ") + Self.updateDateLabel(lastSuccess, calendar: calendar)
+    }
+    func usageWarning(at date: Date) -> String? {
+        if let failure = usageFailureText() { return failure }
+        if (usage ?? [:]).values.contains(where: { $0.isStale(at: date) || $0.windows.contains(where: { $0.resetsAt.map { $0 <= date } == true }) }) { return "Usage readings need refresh" }
+        return nil
+    }
+
+}
+
+struct UsageInputModel {
+    struct UsageWindowInput: Decodable { let window: String?; let used_percent: Double?; let resets_at: String? }
+    struct UsageInput: Decodable {
+        let status: String?
+        let observed_at: String?
+        let windows: [UsageWindowInput]?
+        let refresh_status: String?
+        let last_attempt_at: String?
+        let last_success_at: String?
+        let last_failure_at: String?
+        let failure_reason: String?
+
+        var refresh: UsageRefresh? {
+            guard let rawStatus = refresh_status, let status = UsageRefreshStatus(rawValue: rawStatus) else { return nil }
+            return UsageRefresh(status: status, lastAttemptAt: UsageInputModel.parseDate(last_attempt_at),
+                lastSuccessAt: UsageInputModel.parseDate(last_success_at), lastFailureAt: UsageInputModel.parseDate(last_failure_at),
+                failureReason: status == .failed ? UsageFailureReason(rawValue: failure_reason ?? "") ?? .unavailable : nil)
+        }
+    }
+    static func parseDate(_ value: String?) -> Date? {
+        guard let value else { return nil }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fractional.date(from: value) ?? ISO8601DateFormatter().date(from: value)
+    }
+
+
+    static func agentUsage(_ inputs: [String: UsageInput]) -> [String: AgentUsage] {
+        var result: [String: AgentUsage] = [:]
+        for (name, input) in inputs where ["claude", "codex"].contains(name) {
+            let windows = (input.status == "ok" ? input.windows ?? [] : []).compactMap { item -> UsageWindow? in
+                guard let name = item.window, let used = item.used_percent, used.isFinite, (0...100).contains(used) else { return nil }
+                return UsageWindow(window: name, usedPercent: used, resetsAt: UsageInputModel.parseDate(item.resets_at))
+            }
+            if !windows.isEmpty || input.refresh != nil {
+                result[name] = AgentUsage(observedAt: windows.isEmpty ? nil : UsageInputModel.parseDate(input.observed_at),
+                    windows: windows, refresh: input.refresh)
+            }
+        }
+        return result
+    }
+
+}
+
+enum StoreError: Error { case sharedContainerUnavailable, invalidDate, oversized, oldSnapshot, lockUnavailable }
+
+enum StatusStore {
+    static var group: String { Bundle.main.object(forInfoDictionaryKey: "UsageAppGroup") as? String ?? "" }
+    static let kind = "UsageWidget"
+    static func fileURL() throws -> URL {
+        guard let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
+        else { throw StoreError.sharedContainerUnavailable }
+        return root.appendingPathComponent("status.json")
+    }
+    // Diagnostic receipt contains only timestamps, never account or conversation data.
+    static func recordTimelineRead(status: WidgetStatus?, at date: Date, to url: URL? = nil) throws {
+        let destination = try url ?? fileURL().deletingLastPathComponent().appendingPathComponent("timeline-read.json")
+        var receipt = ["read_at": date.timeIntervalSince1970]
+        if let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String, let number = Double(build) {
+            receipt["build"] = number
+        }
+        for (agent, usage) in status?.usage ?? [:] {
+            if let observed = usage.observedAt { receipt[agent + "_observed_at"] = observed.timeIntervalSince1970 }
+        }
+        try JSONSerialization.data(withJSONObject: receipt, options: [.sortedKeys]).write(to: destination, options: .atomic)
+    }
+    static func load(from url: URL? = nil) -> WidgetStatus? {
+        guard let file = try? url ?? fileURL(), let data = try? Data(contentsOf: file), data.count < 262144
+        else { return nil }
+        return try? JSONDecoder().decode(WidgetStatus.self, from: data)
+    }
+    /// Only successful source observations can advance the reading timestamp.
+    static func publishUsage(input: Data, to url: URL? = nil, enabled: [String]? = nil) throws -> WidgetStatus {
+        struct Update: Decodable { let usage: [String: UsageInputModel.UsageInput] }
+        guard input.count < 262144 else { throw StoreError.oversized }
+        let update = try JSONDecoder().decode(Update.self, from: input)
+        let destination = try url ?? fileURL()
+        return try locked(destination) {
+            var value = load(from: destination) ?? WidgetStatus()
+            value.usage = merged(value.usage ?? [:], UsageInputModel.agentUsage(update.usage))
+            value.usage = value.usage?.filter { (enabled ?? WidgetSettings.load().enabled).contains($0.key) }
+            value.usageHistory = UsageHistory.recording(value.usageHistory ?? [:], usage: value.usage ?? [:], at: Date())
+            try JSONEncoder().encode(value).write(to: destination, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
+            return value
+        }
+    }
+
+    static func merged(_ old: [String: AgentUsage], _ new: [String: AgentUsage]) -> [String: AgentUsage] {
+        var result = old
+        let latestAllowed = Date().addingTimeInterval(30)
+        for (key, value) in new where ["claude", "codex"].contains(key) {
+            let previous = result[key]
+            // Source observations and refresh attempts can arrive through separate publishers in either order.
+            let previousObserved = (previous?.observedAt).flatMap { $0 <= latestAllowed ? $0 : nil }
+            let useReading = !value.windows.isEmpty && value.observedAt.map {
+                $0 <= latestAllowed && $0 >= (previousObserved ?? .distantPast)
+            } == true
+            let refresh = mergedRefresh(previous?.refresh, value.refresh, latestAllowed: latestAllowed)
+            if useReading || previous != nil || refresh != nil {
+                result[key] = AgentUsage(observedAt: useReading ? value.observedAt : previous?.observedAt,
+                    windows: useReading ? value.windows : previous?.windows ?? [], refresh: refresh)
+            }
+        }
+        return result
+    }
+
+    private static func mergedRefresh(_ old: UsageRefresh?, _ new: UsageRefresh?, latestAllowed: Date) -> UsageRefresh? {
+        guard let new else { return old }
+        // Reject future clocks for the incoming outcome. A historical failure retained on recovery may
+        // come from a corrected system clock; discard that date without discarding the valid recovery.
+        let newOutcome = new.status == .ok ? new.lastSuccessAt : new.status == .failed ? new.lastFailureAt : nil
+        guard [new.lastAttemptAt, newOutcome].compactMap({ $0 }).allSatisfy({ $0 <= latestAllowed }) else { return old }
+        func plausible(_ stamp: Date?) -> Date? { stamp.flatMap { $0 <= latestAllowed ? $0 : nil } }
+        // A verified fallback receipt can recover an existing attempt without starting another probe.
+        // Compare outcome times as well as attempt starts; historical failure dates never age an OK result.
+        func outcomeStamp(_ refresh: UsageRefresh?) -> Date? {
+            guard let refresh else { return nil }
+            let outcome = refresh.status == .ok ? refresh.lastSuccessAt : refresh.status == .failed ? refresh.lastFailureAt : nil
+            return [refresh.lastAttemptAt, outcome].compactMap { plausible($0) }.max()
+        }
+        let oldStamp = outcomeStamp(old)
+        let newStamp = outcomeStamp(new)
+        let chosen: UsageRefresh
+        if old == nil || newStamp.map({ $0 > (oldStamp ?? .distantPast) }) == true { chosen = new }
+        else { chosen = old! }
+        return UsageRefresh(status: chosen.status, lastAttemptAt: plausible(chosen.lastAttemptAt),
+            lastSuccessAt: [old?.lastSuccessAt, new.lastSuccessAt].compactMap({ plausible($0) }).max(),
+            lastFailureAt: chosen.status == .failed ? plausible(chosen.lastFailureAt) : [old?.lastFailureAt, new.lastFailureAt].compactMap({ plausible($0) }).max(),
+            failureReason: chosen.status == .failed ? chosen.failureReason : nil)
+    }
+
+    static func locked<T>(_ destination: URL, action: () throws -> T) throws -> T {
+        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let fd = open(destination.path + ".lock", O_CREAT | O_RDWR, 0o600)
+        guard fd >= 0 else { throw StoreError.lockUnavailable }
+        defer { close(fd) }
+        guard flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw StoreError.lockUnavailable }
+        defer { flock(fd, LOCK_UN) }
+        return try action()
+    }
+}
