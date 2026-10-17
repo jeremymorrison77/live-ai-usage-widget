@@ -2,6 +2,8 @@
 
 A macOS desktop widget that shows how much of your Claude Code and ChatGPT/Codex coding allowance is left. Small, medium and large widgets come in Clean (default), Solar and Trends styles. Accounts and data stay on your own Mac.
 
+**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.0.0-macOS-arm64.zip)** · version 1.0.0 · macOS 14 or later · M1 or newer
+
 <p align="center">
   <img src="docs/images/clean-small.png" alt="Small widget, Clean style" width="200">
   <img src="docs/images/clean-medium.png" alt="Medium widget, Clean style" width="380">
@@ -24,7 +26,7 @@ Pictures are drawn from the app's own views with made-up sample readings, not a 
 
 ## Download and install
 
-1. Open the [latest release](../../releases/latest) and download `Live-AI-Usage-Widget-1.0.0-macOS-arm64.zip`. Optionally compare it with the `.sha256` checksum file next to it.
+1. Click **Download for Mac** above, or open the [latest release](../../releases/latest) and under Assets click "Download for Mac (Apple Silicon)". The checksum files are optional.
 2. Double-click the ZIP to unzip it and drag **Live AI Usage Widget** into Applications.
 3. Open it. The setup window appears; follow its three Get started steps.
 
