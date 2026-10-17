@@ -55,19 +55,22 @@ import Combine
             signedIn[provider] = value
         }
     }
-    func installClaude() {
-        working["claude"] = "Installing Claude Code…"
+    func install(_ provider: String) {
+        let claude = provider == "claude"
+        working[provider] = claude ? "Installing Claude Code…" : "Installing Codex…"
+        // Claude's official installer, or OpenAI's signed Codex release for Apple Silicon, run in the background.
+        let command = claude ? "curl -fsSL https://claude.ai/install.sh | bash"
+            : "set -e; d=$(mktemp -d); curl -fsSL https://github.com/openai/codex/releases/latest/download/codex-aarch64-apple-darwin.tar.gz -o \"$d/codex.tgz\"; tar -xzf \"$d/codex.tgz\" -C \"$d\"; mkdir -p \"$HOME/.local/bin\"; mv \"$d/codex-aarch64-apple-darwin\" \"$HOME/.local/bin/codex\"; chmod 755 \"$HOME/.local/bin/codex\"; rm -rf \"$d\""
         Task {
-            // Claude's official installer, run in the background.
             let ok = await Task.detached { () -> Bool in
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/bin/bash")
-                process.arguments = ["-c", "curl -fsSL https://claude.ai/install.sh | bash"]
+                process.arguments = ["-c", command]
                 process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
                 do { try process.run(); process.waitUntilExit(); return process.terminationStatus == 0 } catch { return false }
             }.value
-            working["claude"] = nil
-            message = ok ? "Claude Code is installed. Next, sign in." : "Couldn't install Claude Code. Use the install link instead."
+            working[provider] = nil
+            message = ok ? (claude ? "Claude Code" : "Codex") + " is installed. Next, sign in." : "Couldn't install it. Use the install link instead."
             objectWillChange.send()
         }
     }
@@ -369,9 +372,9 @@ struct SettingsView: View {
                         connectRow(1, done: true, title: (claude ? "Claude Code" : "Codex") + " is installed", detail: "Found on this Mac.") { EmptyView() }
                     } else {
                         connectRow(1, title: "Install the official tool",
-                                   detail: claude ? "Not found on this Mac. Install downloads Claude's official tool in the background." : "Not found on this Mac. Install Codex, or the ChatGPT desktop app, which includes it.",
+                                   detail: "Not found on this Mac. Install downloads the official " + (claude ? "Claude Code" : "Codex") + " tool in the background.",
                                    link: claude ? "https://code.claude.com/docs/en/setup" : "https://learn.chatgpt.com/docs/codex/cli#getting-started") {
-                            if claude { Button("Install") { model.installClaude() }.disabled(busy != nil) }
+                            Button("Install") { model.install(item.id) }.disabled(busy != nil)
                         }
                     }
                     let signed = model.signedIn[item.id] == true
