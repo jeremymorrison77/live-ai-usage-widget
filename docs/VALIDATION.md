@@ -1,8 +1,8 @@
 # Validation record
 
-## 0.3.1 (build 7) — 10/17/2026
+## 0.3.1 (build 8) — 10/17/2026
 
-Get started hides once all three steps are done (Setup help button beside Save settings brings it back), Preview usage removed, gallery shows sample readings, adjustable check interval (default 5 minutes). Tests (including new interval checks), signed build and notarization pass (submission 104ca387-f41b-498f-b688-aa720fd66a55 Accepted). App ZIP SHA-256: b176a5e47b2f49fbcd68c7f0b83b3c9c54737c2e736d01acac0446153fbfc791. Installed fresh on the development Mac with earlier settings cleared for a first-run walkthrough. Remaining limits match 0.3.0 below.
+Get started hides once all three steps are done (Setup help button beside Save settings brings it back), Preview usage removed, gallery shows sample readings, adjustable check interval (default 5 minutes). Tests (including new interval checks), signed build and notarization pass (submission e3a73e51-4d8f-4b41-8a4e-a804b5b21048 Accepted). App ZIP SHA-256: 007f6b22117b2e62618d93e0bb461cd26885f691bdf2851316ddc747a39ca66d. Installed fresh on the development Mac with earlier settings cleared for a first-run walkthrough. Remaining limits match 0.3.0 below.
 
 ## 0.3.0 (build 4) — 10/17/2026
 

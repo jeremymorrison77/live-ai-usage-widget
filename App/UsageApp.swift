@@ -37,7 +37,7 @@ import Combine
             status = StatusStore.load()
             WidgetCenter.shared.reloadAllTimelines()
             message = "Saved"
-        } catch { message = "Could not save. Check the app-group signing setup and threshold values." }
+        } catch { message = "Couldn't save settings. Check the color percentages, or reinstall the app." }
     }
     func connect(_ provider: String) {
         do {
@@ -52,8 +52,8 @@ import Combine
             try ("#!/bin/sh\nunset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN OPENAI_API_KEY CLAUDECODE\nexec " + quote(binary) + arguments + "\n").write(to: script, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
             NSWorkspace.shared.open(script)
-            message = "Complete sign-in in Terminal, then return and refresh."
-        } catch { message = "Provider tool not found. Install it using the official setup link." }
+            message = "Finish signing in in Terminal, then choose Check connection."
+        } catch { message = "That app's command-line tool isn't installed. Use Install official tool first." }
     }
     func finishClaudeSetup() {
         do {
@@ -78,21 +78,23 @@ import Combine
     func refresh() {
         guard !busy else { return }
         let settings = self.settings
+        // Nothing to check until an account is turned on; stay quiet instead of reporting.
+        guard !settings.enabled.isEmpty else { message = ""; return }
         let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
         busy = true
-        message = "Refreshing…"
+        message = "Checking usage…"
         Task {
             let payload: Data? = await Task.detached {
                 try? Collector.run(root: root, generation: settings.generation, providers: settings.enabled, interval: Double(settings.refreshMinutes) * 60)
             }.value
             defer { busy = false }
-            guard settings.generation == self.settings.generation else { message = "Accounts changed; refresh again."; return }
-            guard let payload else { message = "Collection failed. Check the official provider tools and storage access."; return }
+            guard settings.generation == self.settings.generation else { message = "Accounts changed. Checking again shortly."; return }
+            guard let payload else { message = "Couldn't check usage. Make sure the Claude or ChatGPT command-line tool is installed and signed in."; return }
             do {
                 status = try StatusStore.publishUsage(input: payload)
                 WidgetCenter.shared.reloadAllTimelines()
-                message = status?.usageFailureText() ?? "Readings checked. Automatic retries respect provider backoff."
-            } catch { message = "Could not publish. Check app-group signing and storage access." }
+                message = status?.usageFailureText() ?? ""
+            } catch { message = "Couldn't save the readings. Try reinstalling the app." }
         }
     }
 }
@@ -158,7 +160,6 @@ struct SettingsView: View {
         }
     }
     var body: some View {
-        VStack(spacing: 0) {
         Form {
             if !setupDone || showSetupHelp {
             Section {
@@ -177,7 +178,7 @@ struct SettingsView: View {
                     Spacer()
                     Toggle("Open at login", isOn: $launchAtLogin).labelsHidden().onChange(of: launchAtLogin) { _, on in
                         do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
-                        catch { model.message = "Login-item change failed. Check macOS Login Items settings."; launchAtLogin = SMAppService.mainApp.status == .enabled }
+                        catch { model.message = "Couldn't change Open at login. Check Login Items in System Settings."; launchAtLogin = SMAppService.mainApp.status == .enabled }
                     }
                 }
                 Text("You can close this window. The widget keeps updating while the app is running. Reopen this window from the Dock or the widget's gear button.").font(.caption).foregroundStyle(.secondary)
@@ -245,6 +246,7 @@ struct SettingsView: View {
             }
             }
         }.formStyle(.grouped)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 6) {
                 HStack(spacing: 12) {
                     if setupDone {
@@ -254,8 +256,9 @@ struct SettingsView: View {
                         .keyboardShortcut(.defaultAction)
                 }
                 if !model.message.isEmpty { Text(model.message).font(.caption).foregroundStyle(.secondary) }
-            }.padding(.vertical, 14).frame(maxWidth: .infinity)
-        }.frame(width: 520, height: 640)
+            }.padding(.vertical, 14).frame(maxWidth: .infinity).background(.bar)
+            }
+            .frame(width: 520, height: 640)
             .onAppear { checkWidgets() }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in checkWidgets() }
             .sheet(isPresented: $showWidgetHelp) {
