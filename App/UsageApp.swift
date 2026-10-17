@@ -39,53 +39,75 @@ import Combine
             message = "Saved"
         } catch { message = "Couldn't save settings. Check the color percentages, or reinstall the app." }
     }
-    func connect(_ provider: String) {
-        do {
-            let binary = try UsageReader.find(provider)
-            settings.generation = UUID().uuidString
-            save()
-            let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
-            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-            let script = root.appendingPathComponent("connect-" + provider + ".command")
-            func quote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\"'\"'") + "'" }
-            let arguments = provider == "claude" ? " auth login" : " login"
-            try ("#!/bin/sh\nunset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN OPENAI_API_KEY CLAUDECODE\nexec " + quote(binary) + arguments + "\n").write(to: script, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
-            NSWorkspace.shared.open(script)
-            message = "Finish signing in in Terminal, then choose Check connection."
-        } catch { message = "That app's command-line tool isn't installed. Use Install official tool first." }
+    /// Provider → what is happening right now, shown in the Connect window.
+    @Published var working: [String: String] = [:]
+    @Published var signInLink: [String: URL] = [:]
+    @Published var signedIn: [String: Bool] = [:]
+    private var probe: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget").appendingPathComponent("probe")
+    }
+    func updateSignedIn(_ provider: String) {
+        let probe = self.probe
+        Task {
+            try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
+            let value = await Task.detached { UsageReader.signedIn(provider, directory: probe) }.value
+            signedIn[provider] = value
+        }
     }
     func installClaude() {
-        do {
-            let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
-            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-            let script = root.appendingPathComponent("install-claude.command")
-            // Claude's official native installer, run visibly in Terminal so the user sees every step.
-            try "#!/bin/sh\ncurl -fsSL https://claude.ai/install.sh | bash\necho\necho 'Done. Close this window and choose Sign in.'\n".write(to: script, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
-            NSWorkspace.shared.open(script)
-            message = "Installing Claude Code in Terminal. When it finishes, choose Sign in."
-        } catch { message = "Couldn't start the installer. Use the Install the official tool link instead." }
+        working["claude"] = "Installing Claude Code…"
+        Task {
+            // Claude's official installer, run in the background.
+            let ok = await Task.detached { () -> Bool in
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/bin/bash")
+                process.arguments = ["-c", "curl -fsSL https://claude.ai/install.sh | bash"]
+                process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
+                do { try process.run(); process.waitUntilExit(); return process.terminationStatus == 0 } catch { return false }
+            }.value
+            working["claude"] = nil
+            message = ok ? "Claude Code is installed. Next, sign in." : "Couldn't install Claude Code. Use the install link instead."
+            objectWillChange.send()
+        }
     }
-    func finishClaudeSetup() {
-        do {
-            let binary = try UsageReader.find("claude")
-            let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
-            let probe = root.appendingPathComponent("probe")
-            try FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
-            func quote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\"'\"'") + "'" }
-            let script = root.appendingPathComponent("setup-claude.command")
-            let command = "#!/bin/sh\nunset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN OPENAI_API_KEY CLAUDECODE\ncd " + quote(probe.path) + " || exit 1\nexec " + quote(binary) + " " + UsageReader.claudeArguments.map(quote).joined(separator: " ") + "\n"
-            try command.write(to: script, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
-            NSWorkspace.shared.open(script)
-        } catch { message = "Install or update the official Claude tool first." }
+    func signIn(_ provider: String) {
+        working[provider] = "Finish signing in in your browser…"
+        signInLink[provider] = nil
+        let probe = self.probe
+        Task {
+            try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
+            let failure: String? = await Task.detached {
+                do {
+                    try UsageReader.signIn(provider, directory: probe) { url in Task { @MainActor in self.signInLink[provider] = url } }
+                    return nil
+                } catch { return (error as? ReaderFailure)?.reason ?? "unavailable" }
+            }.value
+            working[provider] = nil
+            signInLink[provider] = nil
+            if failure == "usage_read_timed_out" { message = "Sign-in timed out. Try again."; return }
+            if failure != nil { message = "Sign-in didn't finish. Try again."; return }
+            settings.generation = UUID().uuidString
+            updateSignedIn(provider)
+            checkConnection()
+        }
     }
     func checkConnection() {
-        // An explicit post-setup check starts a new collection generation; timer retries keep their backoff.
-        settings.generation = UUID().uuidString
-        save()
-        refresh()
+        let probe = self.probe
+        let claude = settings.enabled.contains("claude")
+        Task {
+            // Claude Code asks once whether to trust the folder it runs in; answer it for the app's own empty folder.
+            if claude && (try? UsageReader.find("claude")) != nil {
+                working["claude"] = "Checking…"
+                try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
+                _ = await Task.detached { try? UsageReader.trustProbe(directory: probe) }.value
+                working["claude"] = nil
+            }
+            // An explicit check starts a new collection generation; timer retries keep their backoff.
+            settings.generation = UUID().uuidString
+            save()
+            refresh()
+        }
     }
     func refresh(force: Bool = false) {
         guard !busy else { return }
@@ -337,33 +359,39 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Connect " + name).font(.headline)
-                        Text("Uses your own account through the official " + (claude ? "Claude Code" : "Codex") + " tool. Nothing is typed into this app.").font(.caption).foregroundStyle(.secondary)
+                        Text("Uses your own account through the official " + (claude ? "Claude Code" : "Codex") + " tool. You never type a password into this app.").font(.caption).foregroundStyle(.secondary)
                     }
                     if let reason = model.status?.usage?[item.id]?.refresh?.failureReason {
                         Text(reason.actionLabel(agent: name)).foregroundStyle(.orange)
                     }
+                    let busy = model.working[item.id]
                     if installed {
-                        connectRow(1, done: true, title: (claude ? "Claude Code" : "Codex") + " is installed", detail: "Found on this Mac. Nothing to install.") { EmptyView() }
+                        connectRow(1, done: true, title: (claude ? "Claude Code" : "Codex") + " is installed", detail: "Found on this Mac.") { EmptyView() }
                     } else {
                         connectRow(1, title: "Install the official tool",
-                                   detail: claude ? "Not found on this Mac. Install for me opens Terminal and runs Claude's official installer." : "Not found on this Mac. Install Codex, or the ChatGPT desktop app, which includes it.",
+                                   detail: claude ? "Not found on this Mac. Install downloads Claude's official tool in the background." : "Not found on this Mac. Install Codex, or the ChatGPT desktop app, which includes it.",
                                    link: claude ? "https://code.claude.com/docs/en/setup" : "https://learn.chatgpt.com/docs/codex/cli#getting-started") {
-                            if claude { Button("Install for me") { model.installClaude() } }
+                            if claude { Button("Install") { model.installClaude() }.disabled(busy != nil) }
                         }
                     }
-                    connectRow(2, title: "Sign in", detail: "Opens Terminal and starts the official sign-in for you. Finish it in your browser.") {
-                        Button("Sign in") { model.connect(item.id) }
+                    let signed = model.signedIn[item.id] == true
+                    connectRow(2, done: signed, title: signed ? "Signed in" : "Sign in",
+                               detail: signed ? "Your account is signed in to the official tool." : "Opens your browser to sign in to your own " + name + " account.") {
+                        if !signed { Button("Sign in") { model.signIn(item.id) }.disabled(!installed || busy != nil) }
                     }
-                    if claude {
-                        connectRow(3, title: "Finish setup", detail: "Opens Terminal once so Claude Code can trust the widget's folder. Approve it, then close that Terminal window.") {
-                            Button("Finish setup") { model.finishClaudeSetup() }
+                    connectRow(3, title: "Check connection", detail: "A green check appears in Accounts once a fresh reading arrives.") {
+                        Button("Check connection") { login = nil; model.checkConnection() }.keyboardShortcut(.defaultAction).disabled(!installed || busy != nil)
+                    }
+                    if let busy {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text(busy).font(.callout)
+                            if let link = model.signInLink[item.id] { Link("Open sign-in page", destination: link).font(.callout) }
                         }
-                    }
-                    connectRow(claude ? 4 : 3, title: "Check connection", detail: "A green check appears once a fresh reading arrives.") {
-                        Button("Check connection") { login = nil; model.checkConnection() }.keyboardShortcut(.defaultAction)
                     }
                     HStack { Spacer(); Button("Cancel") { login = nil }.keyboardShortcut(.cancelAction) }
                 }.padding(24).frame(width: 460)
+                .onAppear { model.updateSignedIn(item.id) }
             }
     }
     private func connectRow<Action: View>(_ number: Int, done: Bool = false, title: String, detail: String, link: String? = nil, @ViewBuilder action: () -> Action) -> some View {

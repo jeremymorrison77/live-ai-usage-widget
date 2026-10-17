@@ -310,3 +310,74 @@ enum UsageReader {
         throw ReaderFailure("usage_read_timed_out")
     }
 }
+
+/// Setup helpers that run the official tools in the background, so no Terminal window is needed.
+extension UsageReader {
+    private static var uptime: Double { ProcessInfo.processInfo.systemUptime }
+    private static func plain(_ data: Data) -> String {
+        replace("\u{1b}\\[[0-9;?>=]*[a-zA-Z]", String(decoding: data, as: UTF8.self))
+    }
+
+    /// Answers Claude Code's one-time workspace question, and only for the app's own empty probe folder.
+    static func trustProbe(directory: URL, timeout: Double = 20) throws {
+        let child = try ChildProcess(binary: find("claude"), arguments: claudeArguments, directory: directory.path, terminal: true)
+        defer { child.stop() }
+        let start = uptime
+        var data = Data(), answered = false
+        while uptime - start < timeout {
+            if let chunk = try child.readChunk() {
+                if chunk.isEmpty { throw ReaderFailure("unavailable") }
+                data.append(chunk)
+                if String(decoding: chunk, as: UTF8.self).contains("\u{1b}[6n") { try child.send(Data("\u{1b}[1;1R".utf8)) }
+            }
+            let text = plain(data)
+            if !matches("(?i)unknown option|unrecognized option", text).isEmpty { throw ReaderFailure("cli_update_required") }
+            if !matches("(?i)Not logged in|Login expired|run /login", text).isEmpty { throw ReaderFailure("sign_in_required") }
+            if !answered && text.contains("Accessing workspace:") && text.contains("Enter y/n:") {
+                let flat = text.replacingOccurrences(of: "\r", with: "").replacingOccurrences(of: "\n", with: "")
+                guard flat.contains(directory.path) || flat.contains(directory.resolvingSymlinksInPath().path) else { throw ReaderFailure("interactive_setup_required") }
+                try child.send(Data("y\r".utf8)); data = Data(); answered = true
+                continue
+            }
+            // Ready prompt means the folder is trusted (now or already).
+            if uptime - start >= 2 && !matches("\\$\\s*$", text).isEmpty { return }
+        }
+        throw ReaderFailure("usage_read_timed_out")
+    }
+
+    /// Runs the official sign-in without Terminal. The tool opens the browser itself; any sign-in link it prints is passed on.
+    static func signIn(_ provider: String, directory: URL, timeout: Double = 300, onLink: @escaping (URL) -> Void) throws {
+        let arguments = provider == "claude" ? ["auth", "login", "--claudeai"] : ["login"]
+        let child = try ChildProcess(binary: find(provider), arguments: arguments, directory: directory.path, terminal: true)
+        defer { child.stop() }
+        let start = uptime
+        var data = Data(), linked = false
+        while uptime - start < timeout {
+            guard let chunk = try child.readChunk() else { continue }
+            if chunk.isEmpty { return } // The tool finished; the connection check confirms the result.
+            data.append(chunk)
+            guard data.count <= 262144 else { throw ReaderFailure("output_too_large") }
+            if String(decoding: chunk, as: UTF8.self).contains("\u{1b}[6n") { try child.send(Data("\u{1b}[1;1R".utf8)) }
+            let text = plain(data)
+            if !linked, let match = matches("(https://[^\\s\"'<>]+)", text).first, let url = URL(string: match[1]) { linked = true; onLink(url) }
+            if !matches("(?i)paste (the )?code", text).isEmpty { throw ReaderFailure("interactive_setup_required") }
+        }
+        throw ReaderFailure("usage_read_timed_out")
+    }
+
+    /// Whether the official tool reports a signed-in account. nil when it can't tell.
+    static func signedIn(_ provider: String, directory: URL) -> Bool? {
+        guard let child = try? ChildProcess(binary: find(provider), arguments: provider == "claude" ? ["auth", "status"] : ["login", "status"], directory: directory.path, terminal: true) else { return nil }
+        defer { child.stop() }
+        let start = uptime
+        var data = Data()
+        while uptime - start < 10 {
+            guard let chunk = try? child.readChunk() else { continue }
+            if chunk.isEmpty { break }
+            data.append(chunk)
+        }
+        let text = String(decoding: data, as: UTF8.self)
+        if provider == "claude" { return text.contains("\"loggedIn\": true") ? true : text.contains("\"loggedIn\": false") ? false : nil }
+        return text.localizedCaseInsensitiveContains("not logged in") ? false : text.localizedCaseInsensitiveContains("logged in") ? true : nil
+    }
+}
