@@ -316,7 +316,12 @@ enum UsageReader {
         return ["status": "ok", "observed_at": iso(now), "windows": windows]
     }
     static let claudeArguments = ["--safe-mode", "--no-chrome", "--setting-sources", "", "--tools", "", "--strict-mcp-config", "--permission-mode", "dontAsk", "--settings", "{\"disableAllHooks\":true,\"remoteControlAtStartup\":false}", "--ax-screen-reader"]
+    /// Only one Claude Code session at a time: on a first run, two at once (the connect step and a background
+    /// check) block each other on its one-time setup and both stall.
+    static let claudeTurn = NSLock()
     static func claude(directory: URL, binary: String? = nil, timeout: Double = 35) throws -> [String: Any] {
+        guard claudeTurn.lock(before: Date().addingTimeInterval(90)) else { throw ReaderFailure("usage_read_timed_out") }
+        defer { claudeTurn.unlock() }
         let child = try ChildProcess(binary: binary ?? find("claude"), arguments: claudeArguments, directory: directory.path, terminal: true)
         defer { child.stop() }
         let start = ProcessInfo.processInfo.systemUptime
@@ -332,6 +337,7 @@ enum UsageReader {
                 data.append(chunk)
                 if String(decoding: chunk, as: UTF8.self).contains("\u{1b}[6n") { try child.send(Data("\u{1b}[1;1R".utf8)) }
             }
+            trace?("usage: " + String(decoding: data, as: UTF8.self))
             let text = try terminal(String(decoding: data, as: UTF8.self))
             if !matches("(?i)unknown option|unrecognized option", text).isEmpty { throw ReaderFailure("cli_update_required") }
             if !matches("(?i)Not logged in|Login expired|run /login", text).isEmpty { throw ReaderFailure("sign_in_required") }
@@ -362,33 +368,48 @@ extension UsageReader {
         replace("\u{1b}\\[[0-9;?>=]*[a-zA-Z]", String(decoding: data, as: UTF8.self))
     }
 
+    /// Testing only: receives every piece of screen output from the folder-trust step.
+    nonisolated(unsafe) static var trace: ((String) -> Void)?
     /// Set by the app: told what Claude Code last showed when it stalls, for the diagnostic report.
     nonisolated(unsafe) static var onStall: ((String) -> Void)?
     static func reportStall(_ where_: String, _ text: String) {
         let screen = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.suffix(4).joined(separator: " / ")
         onStall?(where_ + " stalled; Claude Code showed: " + String(screen.suffix(240)))
     }
-    /// Claude Code's one-time welcome screens on a fresh install (never opened in Terminal): keep the suggested text
-    /// style, continue past the safety notes, and decline the optional Terminal changes. Nothing else is answered.
+    /// Claude Code's one-time welcome screens on a fresh install (never opened in Terminal). In the mode the app uses,
+    /// lists are answered by typing an option's number, then Enter. Keeps the suggested ("current") text style,
+    /// continues past the safety notes, and declines the optional Terminal changes. Nothing else is answered.
     static func answerFirstRun(_ text: String, child: ChildProcess, answered: inout Set<String>) throws -> Bool {
-        let screens: [(key: String, marker: String, answer: Data)] = [
-            ("style", "Choose the text style", Data("\r".utf8)),
-            ("notes", "Security notes", Data("\r".utf8)),
-            ("terminal", "Use Claude Code's terminal setup?", Data([27]))]
-        for screen in screens where !answered.contains(screen.key) && text.contains(screen.marker) {
-            try child.send(screen.answer)
-            answered.insert(screen.key)
-            return true
+        // Keys typed the instant a screen appears are dropped, so each answer waits a moment first.
+        func pick(_ pattern: String, fallback: String) throws {
+            Thread.sleep(forTimeInterval: 1)
+            let number = matches(pattern, text).first?[1] ?? fallback
+            try child.send(Data(number.utf8))
+            Thread.sleep(forTimeInterval: 0.4)
+            try child.send(Data("\r".utf8))
+        }
+        if !answered.contains("style"), text.contains("Choose the text style"), text.contains("Enter to submit") {
+            try pick("(\\d+)\\.\\s*current:", fallback: "1"); answered.insert("style"); return true
+        }
+        if !answered.contains("notes"), text.contains("Security notes"), text.contains("Press Enter to continue") {
+            Thread.sleep(forTimeInterval: 1); try child.send(Data("\r".utf8)); answered.insert("notes"); return true
+        }
+        if !answered.contains("terminal"), text.contains("Use Claude Code's terminal setup?") {
+            if matches("(\\d+)\\.\\s*No", text).isEmpty { Thread.sleep(forTimeInterval: 1); try child.send(Data([27])) } else { try pick("(\\d+)\\.\\s*No", fallback: "2") }
+            answered.insert("terminal"); return true
         }
         return false
     }
 
     /// Answers Claude Code's one-time workspace question, and only for the app's own empty probe folder.
     static func trustProbe(directory: URL, binary: String? = nil, timeout: Double = 45) throws {
+        guard claudeTurn.lock(before: Date().addingTimeInterval(90)) else { throw ReaderFailure("usage_read_timed_out") }
+        defer { claudeTurn.unlock() }
+        trace?("trust: starting")
         let child = try ChildProcess(binary: binary ?? find("claude"), arguments: claudeArguments, directory: directory.path, terminal: true)
         defer { child.stop() }
         let start = uptime
-        var data = Data(), answered = false
+        var data = Data(), answers = 0
         var firstRun: Set<String> = []
         while uptime - start < timeout {
             if let chunk = try child.readChunk() {
@@ -396,14 +417,19 @@ extension UsageReader {
                 data.append(chunk)
                 if String(decoding: chunk, as: UTF8.self).contains("\u{1b}[6n") { try child.send(Data("\u{1b}[1;1R".utf8)) }
             }
+            trace?(plain(data))
             let text = plain(data)
             if !matches("(?i)unknown option|unrecognized option", text).isEmpty { throw ReaderFailure("cli_update_required") }
             if !matches("(?i)Not logged in|Login expired|run /login", text).isEmpty { throw ReaderFailure("sign_in_required") }
             if try answerFirstRun(text, child: child, answered: &firstRun) { data = Data(); continue }
-            if !answered && text.contains("Accessing workspace:") && text.contains("Enter y/n:") {
+            if answers < 3 && text.contains("Accessing workspace:") && text.contains("Enter y/n:") {
                 let flat = text.replacingOccurrences(of: "\r", with: "").replacingOccurrences(of: "\n", with: "")
                 guard flat.contains(directory.path) || flat.contains(directory.resolvingSymlinksInPath().path) else { throw ReaderFailure("interactive_setup_required") }
-                try child.send(Data("y\r".utf8)); data = Data(); answered = true
+                // Typed like a person: wait for the question to settle, the answer, a short pause, then Enter.
+                // If the same question comes back (the keys were dropped), answer it again, up to three times.
+                Thread.sleep(forTimeInterval: 1)
+                try child.send(Data("y".utf8)); Thread.sleep(forTimeInterval: 0.4); try child.send(Data("\r".utf8))
+                data = Data(); answers += 1
                 continue
             }
             // Ready prompt means the folder is trusted (now or already).

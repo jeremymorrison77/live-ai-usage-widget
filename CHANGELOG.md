@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Connect now works with a Claude Code that has never been opened in Terminal: its one-time welcome screens and folder question are answered the way a person would (an option number, a short pause, then Enter). Before, keys sent too quickly were ignored and Connect timed out. Verified on a fresh macOS 15 test Mac. Only one Claude Code session runs at a time.
+
 ## 1.1.7
 
 Works with a Claude Code that has never been opened in Terminal: its one-time welcome screens are answered (keep the suggested text style, continue past the safety notes, decline the optional Terminal changes). If Claude Code ever stalls, the activity log records what it last showed.
