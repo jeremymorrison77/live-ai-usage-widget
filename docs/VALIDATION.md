@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.4 (build 25) — 10/18/2026
+
+Refresh behavior verified by filming the owner's desktop widget (with permission): Checking within about a second, old bars fade, new bars grow from the left; widget refresh link no longer opens Settings; rate-limit countdown shown. Notarization Accepted (submission c54e84f6-b999-4247-97ba-fd5a23248d46; app ZIP SHA-256 c2761228fba9a199f26fbbf7398c2c9444e35c5bb91b5e150d3ee67ef37d5932).
+
 ## 1.1.3 (build 24) — 10/18/2026
 
 Settings opens at the top with no cursor in any box (checked in a drawn window at the default 520 × 640 size). Notarization Accepted (submission 5d3ae6bc-aba9-4c82-a323-f93a1546d17f; app ZIP SHA-256 c495ac7733efaa0f809d4dd41ec6f64b96842e812866b2ff82174562e91ebedb).
