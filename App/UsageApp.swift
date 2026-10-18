@@ -211,11 +211,11 @@ import UniformTypeIdentifiers
     }
     /// First launch: turn on and connect any account whose official tool is installed and signed in.
     func autoDetect() {
-        guard !settings.autoDetected else { return }
-        settings.autoDetected = true
-        save()
+        guard !settings.autoDetected, !autoDetecting else { return }
+        autoDetecting = true
         let probe = self.probe
         Task {
+            defer { autoDetecting = false }
             try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
             var found: [String] = []
             for provider in ["claude", "codex"] where installed(provider) {
@@ -226,11 +226,15 @@ import UniformTypeIdentifiers
             }
             connecting.subtract(["claude", "codex"].filter { !found.contains($0) })
             Diagnostics.log("First launch: found signed in " + (found.isEmpty ? "none" : found.map(toolName).joined(separator: ", ")))
+            // Marked done only once finished: a copy that quits mid-check (Move to Applications) leaves it to the moved copy.
+            settings.autoDetected = true
+            if !found.isEmpty { settings.enabled = found }
+            save()
             guard !found.isEmpty else { return }
-            settings.enabled = found
             checkConnection(found)
         }
     }
+    private var autoDetecting = false
     func isConnected(_ provider: String) -> Bool {
         // A rate-limited check still counts as connected while the last reading is fresh.
         let usage = status?.usage?[provider]
@@ -506,57 +510,72 @@ enum MenuIcon {
     }()
 }
 
-/// One account: install state beside a single Connect / Connected button that turns it on and off.
+/// One account: its state as plain text, then one standard button for the next step, as in System Settings.
 struct AccountRow: View {
     @ObservedObject var model: UsageModel
     let provider: String
-    @State private var hovering = false
     var body: some View {
         let name = WidgetStatus.name(provider)
         let installed = model.installed(provider)
         let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
         let busy = model.working[provider] ?? (model.connecting.contains(provider) ? "Connecting…" : nil)
         let link = busy != nil ? model.signInLink[provider] : nil
-        // Why the last check failed, shown as the button itself.
+        // Why the last check failed, shown beside the button that fixes it.
         let problem = busy == nil && installed && !connected && model.settings.enabled.contains(provider) ? model.status?.usage?[provider]?.refresh?.failureReason : nil
-        // One line only: every state, including install, problems and the sign-in link, is the button.
         HStack {
-                Text(name)
-                Spacer()
+            Text(name)
+            Spacer()
+            // The spinner sits beside the account that is working.
+            if busy != nil {
+                ProgressView().controlSize(.small)
+                Text(installed ? "Connecting…" : "Installing…").foregroundStyle(.secondary)
+            } else if connected {
+                Label("Connected", systemImage: "checkmark.circle.fill").labelStyle(StatusLabel(color: .green))
+            } else if let problem {
+                Label(Self.status(problem), systemImage: "exclamationmark.circle.fill").labelStyle(StatusLabel(color: .orange))
+            } else if !installed {
+                Text("Not installed").foregroundStyle(.secondary)
+            }
+            if link != nil || busy == nil {
                 Button {
                     if let link { NSWorkspace.shared.open(link) }
                     else if !installed { model.install(provider) }
                     else if problem == .cliUpdateRequired { Task { await model.installNow(provider); model.connect(provider) } }
                     else if connected { model.disconnect(provider) } else { model.connect(provider) }
                 } label: {
-                    Group {
-                        if link != nil { Label("Open sign-in page", systemImage: "safari") }
-                        // The spinner sits inside the button of the account that is working.
-                        else if busy != nil {
-                            HStack(spacing: 6) {
-                                ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 14, height: 14)
-                                Text(installed ? "Connecting…" : "Installing…")
-                            }
-                        }
-                        else if !installed { Label("Install", systemImage: "arrow.down.circle") }
-                        else if connected && hovering { Label("Disconnect", systemImage: "xmark.circle").foregroundStyle(.red) }
-                        else if connected { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
-                        else if let problem { Label(Self.title(problem), systemImage: "exclamationmark.circle").foregroundStyle(.orange) }
-                        else { Label("Connect", systemImage: "person.crop.circle") }
-                    // Wide enough for the longest state, "Open sign-in page" with its icon.
-                    }.frame(width: 150)
+                    if link != nil { Text("Open Sign-In Page") }
+                    else if !installed { Text("Install") }
+                    else if connected { Text("Disconnect") }
+                    else if let problem { Text(Self.title(problem)) }
+                    else { Text("Connect") }
                 }
-                .disabled(busy != nil && link == nil)
-                .onHover { hovering = $0 }
+            }
+        }
+    }
+    /// Short reason shown beside the button.
+    private static func status(_ problem: UsageFailureReason) -> String {
+        switch problem {
+        case .cliUpdateRequired: return "Needs update"
+        case .signInRequired: return "Signed out"
+        case .interactiveSetupRequired: return "Setup unfinished"
+        default: return "Couldn't connect"
         }
     }
     private static func title(_ problem: UsageFailureReason) -> String {
         switch problem {
         case .cliUpdateRequired: return "Update"
-        case .signInRequired: return "Sign in"
-        case .interactiveSetupRequired: return "Finish setup"
-        default: return "Try again"
+        case .signInRequired: return "Sign In"
+        case .interactiveSetupRequired: return "Finish Setup"
+        default: return "Try Again"
         }
+    }
+}
+
+/// Colored symbol, plain secondary text: how System Settings shows a state.
+struct StatusLabel: LabelStyle {
+    let color: Color
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) { configuration.icon.foregroundStyle(color); configuration.title.foregroundStyle(.secondary) }
     }
 }
 
@@ -619,7 +638,7 @@ struct SettingsView: View {
                     step(2, "Add “Live AI Usage Widget” to your desktop", done: (widgetsPlaced ?? 0) > 0)
                     Spacer()
                     if (widgetsPlaced ?? 0) > 0 { Text("On desktop").foregroundStyle(.secondary) }
-                    else { Button("Show me how") { showWidgetHelp = true } }
+                    else { Button("Show Me How") { showWidgetHelp = true } }
                 }
             } header: { Text("Setup help") }
             }
@@ -632,9 +651,9 @@ struct SettingsView: View {
                         if model.update != nil { model.installUpdate() } else { model.checkForUpdates(manual: true) }
                     } label: {
                         Group {
-                            if let update = model.update { Label("Update to " + update.version, systemImage: "arrow.down.circle.fill") }
-                            else { Text("Check for updates") }
-                        }.frame(width: 150)
+                            if let update = model.update { Text("Update to " + update.version) }
+                            else { Text("Check for Updates") }
+                        }
                     }
                     .disabled(model.updateStatus == "Downloading…" || model.updateStatus == "Checking…")
                 }
@@ -713,7 +732,7 @@ struct SettingsView: View {
             if setupDone || !model.message.isEmpty {
             VStack(spacing: 6) {
                 if setupDone {
-                    Button { showSetupHelp.toggle() } label: { Text(showSetupHelp ? "Hide setup help" : "Setup help").frame(width: 130) }
+                    Button { showSetupHelp.toggle() } label: { Text(showSetupHelp ? "Hide Setup Help" : "Setup Help") }
                 }
                 if !model.message.isEmpty { Text(model.message).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             }.padding(.vertical, 12).frame(maxWidth: .infinity).background(.bar)

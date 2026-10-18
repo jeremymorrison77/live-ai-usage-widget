@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Accounts already signed in now connect by themselves after Move to Applications. Before, the first copy (opened from Downloads) marked that step done and then quit for the move before finishing it, so the moved copy showed Connect. Settings buttons are standard Mac buttons at their natural size, without icons, and each account's state (Connected, Connecting…, Not installed, or what went wrong) shows as plain text beside its button.
+
 ## 1.1.8
 
 Connect now works with a Claude Code that has never been opened in Terminal: its one-time welcome screens and folder question are answered the way a person would (an option number, a short pause, then Enter). Before, keys sent too quickly were ignored and Connect timed out. Verified on a fresh macOS 15 test Mac. Only one Claude Code session runs at a time.

@@ -11,6 +11,7 @@ New-user matrix, 10/18/2026, published 1.1.8 ZIP (checksum matched), marked as d
 - Both: first launch connected both by itself in 9 s. ChatGPT sign-in through the app's own browser sign-in worked (device-code sign-in is off on the owner's account).
 - Login item points to /Applications after the move and reopened the app after a restart.
 - Bug: opened from Downloads and moved, first-launch auto-connect is skipped. The hidden first copy marks it done, then quits for the move before it finishes; the moved copy then shows Connect.
+- Fixed after 1.1.8 (unreleased, signed test build): quit during first-launch detection, then opened from Applications, connected both accounts by itself; Move to Applications with both signed in also connected. Opened from Downloads without the download mark, the move asks macOS permission for the Downloads folder first; the app waits on that question.
 - Minor: while ChatGPT sign-in was still open, a check reported ChatGPT as rate limited rather than not signed in.
 
 ## 1.1.7 (build 28) — 10/18/2026
