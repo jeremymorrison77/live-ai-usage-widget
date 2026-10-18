@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.7 (build 28) — 10/18/2026
+
+First-run Claude Code handling tested with a scripted fake that shows the three welcome screens; the real fresh-install case awaits the tester's update. Notarization Accepted (submission 24ee8af2-33f8-47ba-9198-e5f629dbea5b; app ZIP SHA-256 3e076324cdcc81e7c1016f17cbc6868e8ea2b5502e2fd4b366e38f753543d663).
+
 ## 1.1.6 (build 27) — 10/18/2026
 
 Owner confirmed refresh works after the stale widget helper was stopped; launch showed no Settings window on screen. Notarization Accepted (submission 41b0b099-fc8c-4739-b852-d349c158a504; app ZIP SHA-256 ef0a13c1dd3eac1729e8d36785c2e587616a079ae13a5dc9495ace96d87d4278). The reopen-after-update path is first exercised by the next update.

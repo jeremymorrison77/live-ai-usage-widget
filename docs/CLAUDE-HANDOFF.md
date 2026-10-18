@@ -1,12 +1,12 @@
 # Maintainer handoff
 
-Current version: **1.1.6 (build 27), Apple Silicon, macOS 14+**, published as a full GitHub release in the public repository. This repository is the whole project; it has no parent workspace.
+Current version: **1.1.7 (build 28), Apple Silicon, macOS 14+**, published as a full GitHub release in the public repository. This repository is the whole project; it has no parent workspace.
 
 ## Current state
 
 - Name: Live AI Usage Widget. Bundle identifier `com.liveaiusagewidget.app`, widget `com.liveaiusagewidget.app.widget`, app group `TEAMID.com.liveaiusagewidget.app`, link scheme `live-ai-usage-widget://`.
 - The app is a menu bar app (no Dock icon): one iconned line per account, then Settings, Check usage now and Quit. It opens one setup window (Setup help steps, hidden once all are done with a Setup help link to show them, accounts, appearance, updates interval, small-widget readings; settings apply as they change (no Save button); Setup help toggle at the bottom once set up). There is no separate preview window. Connecting needs no Terminal: background install, browser sign-in, and automatic trust of the app's own probe folder. Clean is the default style.
-- Tests, compile-only build, source export and CI pass. 1.1.6 is notarized (submission `41b0b099-fc8c-4739-b852-d349c158a504`), app ZIP SHA-256 `ef0a13c1dd3eac1729e8d36785c2e587616a079ae13a5dc9495ace96d87d4278`.
+- Tests, compile-only build, source export and CI pass. 1.1.7 is notarized (submission `24ee8af2-33f8-47ba-9198-e5f629dbea5b`), app ZIP SHA-256 `3e076324cdcc81e7c1016f17cbc6868e8ea2b5502e2fd4b366e38f753543d663`.
 - The README picture `docs/images/overview.png` is drawn by `bash scripts/render_overview.sh` from the app's real views with sample data, then stripped of metadata. `scripts/package.py` refuses PNGs that carry metadata.
 
 Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for what is still untested.
@@ -19,6 +19,10 @@ Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for
 4. Push, wait for CI, then create a GitHub prerelease with the app ZIP, source ZIP and both `.sha256` files. Download them back and verify the checksums. Give the app ZIP the asset label "Download for Mac (Apple Silicon) - Live AI Usage Widget X.Y.Z" and update the README Download for Mac link to the new file name.
 
 Keep commits on the GitHub noreply address. Never add credentials, account screenshots or personal paths.
+
+## 1.1.7 (10/18/2026)
+
+A tester on macOS 15.4.1 with Claude Code 2.1.302 signed in fine but the folder-trust probe and usage read timed out; most likely Claude Code's first-run onboarding (never opened in Terminal). `UsageReader.answerFirstRun` answers it: "Choose the text style" → Enter, "Security notes" → Enter, "Use Claude Code's terminal setup?" → Escape (decline). Not yet confirmed on the tester's Mac. On a stall, `UsageReader.onStall` logs the last screen lines to the activity log. Trust probe timeout is 45 s.
 
 ## 1.1.6 (10/18/2026)
 
