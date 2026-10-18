@@ -73,15 +73,13 @@ import SwiftUI
         let settingsImage = NSImage(size: host.bounds.size); settingsImage.addRepresentation(rep)
 
         let page = HStack(alignment: .top, spacing: 36) {
-            VStack(alignment: .leading, spacing: 30) {
-                labeled("Clean · small", widget("clean", "small"))
-                labeled("Clean · large", widget("clean", "large"))
-                labeled("Solar · small", widget("solar", "small"))
-            }.frame(width: 360, alignment: .leading)
-            VStack(alignment: .leading, spacing: 30) {
-                labeled("Clean · medium", widget("clean", "medium"))
-                labeled("Solar · medium", widget("solar", "medium"))
-                labeled("Solar · large", widget("solar", "large"))
+            // One column per style: small, medium, large.
+            ForEach(["Clean", "Solar"], id: \.self) { style in
+                VStack(alignment: .leading, spacing: 30) {
+                    labeled(style + " · small", widget(style.lowercased(), "small"))
+                    labeled(style + " · medium", widget(style.lowercased(), "medium"))
+                    labeled(style + " · large", widget(style.lowercased(), "large"))
+                }.frame(width: 360, alignment: .leading)
             }
             labeled("Settings", Image(nsImage: settingsImage).resizable().frame(width: 520 * 0.8, height: settingsHeight * 0.8).clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .shadow(color: .black.opacity(0.12), radius: 8, y: 2))

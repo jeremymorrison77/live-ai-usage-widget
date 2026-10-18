@@ -4,7 +4,7 @@ import SwiftUI
 struct WidgetSettings: Codable, Equatable {
     var enabled: [String] = []
     var generation = "initial"
-    var usDates = false
+    var usDates = true
     var usageColors = true
     var highThreshold = 30.0
     var lowThreshold = 10.0
@@ -22,7 +22,7 @@ struct WidgetSettings: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = (try c.decodeIfPresent([String].self, forKey: .enabled) ?? []).filter { ["claude", "codex"].contains($0) }
         generation = try c.decodeIfPresent(String.self, forKey: .generation) ?? "initial"
-        usDates = try c.decodeIfPresent(Bool.self, forKey: .usDates) ?? false
+        usDates = try c.decodeIfPresent(Bool.self, forKey: .usDates) ?? true
         usageColors = try c.decodeIfPresent(Bool.self, forKey: .usageColors) ?? true
         highThreshold = try c.decodeIfPresent(Double.self, forKey: .highThreshold) ?? 30
         lowThreshold = try c.decodeIfPresent(Double.self, forKey: .lowThreshold) ?? 10

@@ -672,7 +672,7 @@ struct SettingsView: View {
                 Picker("Style", selection: $model.settings.style) {
                     Text("Clean").tag("clean"); Text("Solar").tag("solar")
                 }
-                Picker("Date format", selection: $model.settings.usDates) { Text("European").tag(false); Text("US").tag(true) }
+                Picker("Date format", selection: $model.settings.usDates) { Text("US").tag(true); Text("European").tag(false) }
                 Toggle("Usage colors", isOn: $model.settings.usageColors)
                 HStack {
                     percentField(model.settings.highThreshold) { model.settings.highThreshold = min(100, max(model.settings.lowThreshold+1, $0)) }

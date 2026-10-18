@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+
+US dates (10/19 2:00 AM) are the default for new installs; European dates stay available in Settings, and an existing choice is kept. The README picture shows each style in its own column: Clean on the left, Solar in the middle.
+
 ## 1.1.9
 
 Accounts already signed in now connect by themselves after Move to Applications. Before, the first copy (opened from Downloads) marked that step done and then quit for the move before finishing it, so the moved copy showed Connect. Settings buttons are standard Mac buttons at their natural size, without icons, and each account's state (Connected, Connecting…, Not installed, or what went wrong) shows as plain text beside its button.

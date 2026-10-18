@@ -1,6 +1,6 @@
 # Release acceptance
 
-Version 1.1.9. A signed, notarized Apple Silicon ZIP is prepared. Notarization establishes Apple's distribution check, not compatibility with every account or Mac.
+Version 1.2.0. A signed, notarized Apple Silicon ZIP is prepared. Notarization establishes Apple's distribution check, not compatibility with every account or Mac.
 
 ## Verified locally
 
