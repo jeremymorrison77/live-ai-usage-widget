@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.1 (build 22) — 10/18/2026
+
+Claude Code sign-in fix, update check and install, Move to Applications. Tests pass, including a fake sign-in that prints the paste-code line. Update download, checksum and notarization/team checks verified against the real 1.1.0 ZIP served locally; a tampered checksum was refused. Notarization Accepted (submission 21d2cbe7-d7ff-43b7-a7c3-ee02d7cfe3a9; app ZIP SHA-256 cd606e48a6eb8dd51b0bdc2cbd6d03f03b61504653750a7efaa0d6b586eecc50). The full one-click swap is first exercised when a later release ships; real Claude sign-in through the fixed flow not yet repeated.
+
 ## 1.1.0 (build 21) — 10/18/2026
 
 Account rows, naming, loading rows and plan-limit labels from owner testing on the development Mac. Tests, signed build and notarization pass (submission beb517a7-cad3-405a-8188-9ce5cfd09bab Accepted; app ZIP SHA-256 66441efd421eeb5e7c2e36277f241245016331a2e703d144ad47cfcb17061f7a). Owner tested each change in the installed app. Clean-machine install and long-term sign-in renewal are still unverified.

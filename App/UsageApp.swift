@@ -46,10 +46,12 @@ import Combine
             message = "Saved"
         } catch { message = "Couldn't save settings. Check the color percentages, or reinstall the app." }
     }
-    static var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
+    /// Set only by the README picture renderer, which has no app bundle.
+    nonisolated(unsafe) static var sampleVersion: String?
+    static var version: String { sampleVersion ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
     /// Checks GitHub at launch and then once a day when automatic checks are on; `manual` checks right away.
     func checkForUpdates(manual: Bool = false) {
-        guard manual || (settings.autoUpdates && Date().timeIntervalSince(lastUpdateCheck) >= 86400) else { return }
+        guard !SettingsView.sample, manual || (settings.autoUpdates && Date().timeIntervalSince(lastUpdateCheck) >= 86400) else { return }
         guard updateStatus != "Downloading…" else { return }
         lastUpdateCheck = Date()
         if manual { updateStatus = "Checking…" }

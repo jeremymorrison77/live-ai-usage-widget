@@ -7,7 +7,8 @@ sed 's/^@main struct UsageApp/struct UsageApp/' App/UsageApp.swift > build/overv
 xcrun swiftc -parse-as-library -module-cache-path build/module-cache \
   Shared/Status.swift Shared/Settings.swift Shared/StatusView.swift Helper/Reader.swift Helper/Collector.swift Helper/Updater.swift \
   build/overview/UsageApp.swift tests/RenderOverview.swift -o build/overview/render
-build/overview/render build/overview/overview.png
+version=$(sed -n "s/.*CFBundleShortVersionString='\([0-9.]*\)'.*/\1/p" scripts/build.py)
+build/overview/render build/overview/overview.png "$version"
 # Strip metadata; packaging refuses pictures that carry any.
 python3 - <<'PY'
 import subprocess, struct, zlib

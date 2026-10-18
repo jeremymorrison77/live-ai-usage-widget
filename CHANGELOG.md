@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.1
 
 Fixed Claude Code browser sign-in (Authorize led to a "can't be reached" page). The app checks for updates and installs them in one click after checking they are Apple-approved and from the same developer. Opened from Downloads, it offers to move itself into Applications. Finds Claude Code installed with npm, nvm, Bun or Volta. Setup help names the widget up front.
 

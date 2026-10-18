@@ -8,9 +8,8 @@ import SwiftUI
         let app = NSApplication.shared
         app.appearance = NSAppearance(named: .aqua)
         let output = URL(fileURLWithPath: CommandLine.arguments[1])
-        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        components.hour = 10; components.minute = 15
-        let now = Calendar.current.date(from: components)!
+        // Readings must be fresh for accounts to show as connected.
+        let now = Date()
         let hour: TimeInterval = 3600
         let ok = UsageRefresh(status: .ok, lastAttemptAt: now, lastSuccessAt: now, lastFailureAt: nil, failureReason: nil)
         let claude = [UsageWindow(window: "5-hour", usedPercent: 38, resetsAt: now.addingTimeInterval(2.2 * hour)),
@@ -38,6 +37,7 @@ import SwiftUI
         settings.autoDetected = true
         WidgetSettings.sample = settings
         SettingsView.sample = true
+        UsageModel.sampleVersion = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : nil
 
         func widget(_ style: String, _ size: String) -> some View {
             var copy = settings; copy.style = style
@@ -61,7 +61,7 @@ import SwiftUI
         model.timer?.invalidate()
         model.settings = settings
         model.status = status
-        let settingsHeight: CGFloat = 1180
+        let settingsHeight: CGFloat = 1300
         let host = NSHostingView(rootView: SettingsView(model: model).frame(width: 520, height: settingsHeight))
         host.frame = NSRect(x: 0, y: 0, width: 520, height: settingsHeight)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
