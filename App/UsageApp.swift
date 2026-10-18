@@ -180,8 +180,8 @@ import Combine
         // Nothing to check until an account is turned on; stay quiet instead of reporting.
         guard !settings.enabled.isEmpty else { message = ""; connecting = []; return }
         let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
+        // Background checks stay quiet so the window never shifts while it is open.
         busy = true
-        message = "Checking usage…"
         Task {
             let payload: Data? = await Task.detached {
                 try? Collector.run(root: root, generation: settings.generation, providers: settings.enabled, interval: Double(settings.refreshMinutes) * 60, force: force)
@@ -330,11 +330,9 @@ struct AccountRow: View {
                 .disabled(busy != nil)
                 .onHover { hovering = $0 }
             }
-            if let detail = model.working[provider] {
-                HStack(spacing: 6) {
-                    Text(detail).font(.caption).foregroundStyle(.secondary)
-                    if let link = model.signInLink[provider] { Link("Open sign-in page", destination: link).font(.caption) }
-                }
+            // The button says what is happening; only a sign-in link the browser missed gets its own line.
+            if busy != nil {
+                if let link = model.signInLink[provider] { Link("Open sign-in page", destination: link).font(.caption) }
             } else if model.settings.enabled.contains(provider) && !connected, let reason = model.status?.usage?[provider]?.refresh?.failureReason {
                 Text(reason.actionLabel(agent: name)).font(.caption).foregroundStyle(.orange)
             }
@@ -458,12 +456,15 @@ struct SettingsView: View {
                     Button { model.save(); model.refresh() } label: { Text("Save settings").frame(width: 130) }
                         .keyboardShortcut(.defaultAction)
                 }
-                if !model.message.isEmpty { Text(model.message).font(.caption).foregroundStyle(.secondary) }
+                // The line keeps its space when empty so messages never move the window's contents.
+                Text(model.message.isEmpty ? " " : model.message).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }.padding(.vertical, 14).frame(maxWidth: .infinity).background(.bar)
             }
             .frame(width: 520, height: 640)
             .onAppear {
                 NSApp.activate(ignoringOtherApps: true); checkWidgets()
+                // Nothing is selected when the window opens, not even the first percentage field.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { NSApp.windows.filter(\.isVisible).forEach { $0.makeFirstResponder(nil) } }
                 // Open at login starts on; after the first launch it follows the user's choice.
                 if !model.settings.autoDetected && SMAppService.mainApp.status != .enabled {
                     try? SMAppService.mainApp.register(); launchAtLogin = SMAppService.mainApp.status == .enabled
