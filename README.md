@@ -2,13 +2,13 @@
 
 A macOS desktop widget that shows how much of your Claude Code and ChatGPT Codex usage limits are left. Small, medium and large widgets come in Clean (default), Solar and Trends styles. Accounts and data stay on your own Mac.
 
-**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.0.1-macOS-arm64.zip)** · version 1.0.1 · macOS 14 or later · M1 or newer
+**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.1.0-macOS-arm64.zip)** · version 1.1.0 · macOS 14 or later · M1 or newer
 
 <p align="center"><img src="docs/images/overview.png" alt="Settings window and the widget in all sizes and styles" width="100%"></p>
 
 Pictures are drawn from the app's own views with made-up sample readings, not a real account.
 
-**Version 1.0.1.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
+**Version 1.1.0.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
 
 ## Download and install
 
@@ -23,6 +23,7 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 **Setup help** (hides itself once both steps are done; the Setup help button brings it back)
 1. Connect Claude Code, ChatGPT Codex or both.
 2. Add the widget to your desktop: right-click an empty spot on the desktop, choose Edit Widgets, search for Live AI Usage Widget, pick a size and drag it on. macOS doesn't let apps place widgets themselves. Show me how walks through it, and the step turns green once a widget is placed.
+
 **General.** Open at login, on by default.
 
 **Accounts.** One line each for Claude Code and ChatGPT Codex, with one button that always says what it will do: Install, Connect, Connected (hover to Disconnect), or Sign in, Update, Finish setup or Try again when something needs attention. No Terminal needed. On first launch, tools that are already installed and signed in connect on their own. Disconnect only hides that account; the tool stays signed in.
@@ -31,14 +32,16 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 
 **Updates.** Check every N minutes: 5 by default, any value from 1 to 1,440. After a failed check the app waits at least 15 minutes before trying again. Check now in the menu bar checks immediately.
 
-**Small widget readings.** Choose which readings the small widget shows (up to five). Medium and large show every reading.
+**Small widget readings.** Choose which readings the small widget shows (up to five). Medium and large show every reading. A limit your plan doesn't have stays listed, grayed out, as "Not included in your plan" (for example, ChatGPT Pro has no 5-hour limit, and only Claude Max and Premium seats have a weekly Fable limit).
+
+The settings window can be resized and remembers its size.
 
 Save settings applies changes. You can close the window at any time; the widget keeps updating while the app runs.
 
 ## What it shows
 
 - Remaining percentage for each limit your plan exposes: Claude Code's five-hour, weekly and any model-specific weekly windows; ChatGPT Codex five-hour and weekly. ChatGPT Codex here means Codex coding allowances, not other ChatGPT products or API billing.
-- When each limit resets, and when it was last updated. Readings fade as they age and failures show their date.
+- When each limit resets, and when it was last updated. Readings fade as they age and failures show their date. A newly connected account appears right away with Loading… until its first reading arrives.
 - Trends style adds a six-hour history of how fast each limit is being used. Gaps are drawn flat; nothing is invented.
 
 ## Requirements
@@ -61,6 +64,8 @@ From this folder, not a parent project:
 bash scripts/test.sh
 python3 scripts/build.py
 ```
+
+`bash scripts/render_overview.sh` redraws the picture above from the app's own views with sample readings.
 
 This produces a **compile-only** app in `build/Live AI Usage Widget.app`. It is not a signed installer. Nothing is installed, launched, registered at login or stopped by these commands.
 

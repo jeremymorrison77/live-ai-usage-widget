@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.0 (build 21) — 10/18/2026
+
+Account rows, naming, loading rows and plan-limit labels from owner testing on the development Mac. Tests, signed build and notarization pass (submission beb517a7-cad3-405a-8188-9ce5cfd09bab Accepted; app ZIP SHA-256 66441efd421eeb5e7c2e36277f241245016331a2e703d144ad47cfcb17061f7a). Owner tested each change in the installed app. Clean-machine install and long-term sign-in renewal are still unverified.
+
 ## 1.0.1 (build 14) — 10/17/2026
 
 Terminal-free connect flow. Tests, signed build and notarization pass (submission 8da8a2bc-259e-4e85-8d49-c1059463c571 Accepted; app ZIP SHA-256 05d8853e4fc1a605d9c6931434a731af71d48b350873a2460287f5b0594a1d36). On the development Mac the owner completed ChatGPT browser sign-in through the new flow. Long-term sign-in renewal is still unverified.

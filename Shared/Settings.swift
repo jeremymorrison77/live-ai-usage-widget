@@ -41,7 +41,10 @@ struct WidgetSettings: Codable {
     static func url() throws -> URL {
         try StatusStore.fileURL().deletingLastPathComponent().appendingPathComponent("settings.json")
     }
+    /// Set only by the README picture renderer, so drawings never read the real settings file.
+    nonisolated(unsafe) static var sample: WidgetSettings?
     static func load() -> WidgetSettings {
+        if let sample { return sample }
         guard let url = try? url(), let data = try? Data(contentsOf: url), data.count < 8192,
               let value = try? JSONDecoder().decode(WidgetSettings.self, from: data) else { return WidgetSettings() }
         return value

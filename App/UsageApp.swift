@@ -357,7 +357,9 @@ struct SettingsCommand: View {
 
 struct SettingsView: View {
     @ObservedObject var model: UsageModel
-    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    /// Set only by the README picture renderer: shows the defaults instead of this Mac's login state.
+    nonisolated(unsafe) static var sample = false
+    @State private var launchAtLogin = SettingsView.sample || SMAppService.mainApp.status == .enabled
     @State private var widgetsPlaced: Int?
     @State private var showWidgetHelp = false
     @State private var showSetupHelp = false
@@ -369,6 +371,7 @@ struct SettingsView: View {
         model.settings.enabled.contains { model.status?.usage?[$0]?.refresh?.status == .ok && model.status?.usage?[$0]?.isStale(at: Date()) == false }
     }
     private func checkWidgets() {
+        guard !Self.sample else { return }
         WidgetCenter.shared.getCurrentConfigurations { result in
             let count = (try? result.get())?.count
             DispatchQueue.main.async {

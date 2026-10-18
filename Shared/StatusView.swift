@@ -89,7 +89,7 @@ struct TrendsStatusView: View {
                 VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 3) {
                     Text(WidgetStatus.name(agent) + " · " + shortName(window.window))
-                        .foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.85)
+                        .foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.75)
                     Spacer(minLength: 1)
                     Text(waiting ? "…" : "\(Int(window.leftPercent.rounded()))%")
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
