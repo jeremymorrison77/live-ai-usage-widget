@@ -2,7 +2,7 @@
 
 ## 1.2.0
 
-US dates (10/19 2:00 AM) are the default for new installs; European dates stay available in Settings, and an existing choice is kept. The README picture shows each style in its own column: Clean on the left, Solar in the middle.
+US dates (10/19 2:00 AM) are the default for new installs; European dates stay available in Settings, and an existing choice is kept. With Check for updates automatically on, the widget's status line says when a new version is available (for example "Version 1.2.1 available"); tapping it opens Settings. The README picture shows each style in its own column: Clean on the left, Solar in the middle.
 
 ## 1.1.9
 

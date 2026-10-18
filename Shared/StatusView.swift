@@ -154,6 +154,12 @@ struct UsageStatusView: View {
                     // Two slightly smaller lines on the small widget so the whole message fits.
                     .font(.system(size: compact ? 9 : 10))
                     .lineLimit(compact ? 2 : 1).minimumScaleFactor(0.9).fixedSize(horizontal: false, vertical: true)
+            } else if !checking, status?.usageFailureText() == nil, settings.autoUpdates, let version = settings.availableUpdate {
+                // A new version: tapping it opens Settings, where Update is one click.
+                Link(destination: URL(string: "live-ai-usage-widget://settings")!) {
+                    Text("Version " + version + " available" + (compact ? "" : " · " + WidgetStatus.updateDateLabel(status?.usageObservedAt)))
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                }.buttonStyle(.plain)
             } else {
             Text(checking ? "Checking…" : status?.usageFailureText() ?? (compact ? "" : "Last refresh ") + WidgetStatus.updateDateLabel(status?.usageObservedAt))
                 .lineLimit(1).minimumScaleFactor(0.8)

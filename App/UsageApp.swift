@@ -70,6 +70,8 @@ import UniformTypeIdentifiers
     static var version: String { sampleVersion ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
     /// Checks GitHub at launch and then once a day when automatic checks are on; `manual` checks right away.
     func checkForUpdates(manual: Bool = false) {
+        // After an update, the widget stops mentioning the version now installed.
+        if let shown = settings.availableUpdate, !Updater.isNewer(shown, than: Self.version) { settings.availableUpdate = nil; save() }
         guard !SettingsView.sample, manual || (settings.autoUpdates && Date().timeIntervalSince(lastUpdateCheck) >= 86400) else { return }
         guard updateStatus != "Downloading…" else { return }
         lastUpdateCheck = Date()
@@ -79,6 +81,9 @@ import UniformTypeIdentifiers
             Diagnostics.log("Update check: " + (latest.map { "latest " + $0.version } ?? "couldn't reach GitHub"))
             if let latest, Updater.isNewer(latest.version, than: Self.version) { update = latest; updateStatus = "" }
             else if manual { update = nil; updateStatus = latest == nil ? "Couldn't check. Try again later." : "Up to date" }
+            // The widget's status line says a new version is available (shown only while automatic checks are on).
+            let available = latest.flatMap { Updater.isNewer($0.version, than: Self.version) ? $0.version : nil }
+            if latest != nil, settings.availableUpdate != available { settings.availableUpdate = available; save() }
         }
     }
     /// Downloads and checks the new version, then quits so it can replace this one and reopen.
