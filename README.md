@@ -16,7 +16,7 @@ Pictures are drawn from the app's own views with made-up sample readings, not a 
 2. Double-click the ZIP to unzip it and drag **Live AI Usage Widget** into Applications.
 3. Open it from Applications. If you open it from Downloads instead, it offers to move itself into Applications. The setup window appears; follow its Setup help steps.
 
-The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): one line per account (Claude Code, ChatGPT Codex), then Settings, Check now and Quit. Updates: the app checks GitHub once a day and the menu shows "Update to version X" when one is out. One click downloads it, checks it is Apple-approved and from the same developer, replaces the app and reopens it; your settings are kept. Settings also has Check for updates and a switch to turn automatic checks off.
+The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): one line per account (Claude Code, ChatGPT Codex), then Settings, Check usage now and Quit. Updates: the app checks GitHub once a day and the menu shows "Update to version X" when one is out. One click downloads it, checks it is Apple-approved and from the same developer, replaces the app and reopens it; your settings are kept. Settings also has Check for updates and a switch to turn automatic checks off.
 
 ## Setup and settings
 
@@ -30,7 +30,7 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 
 **Appearance.** Style: Clean (default), Solar or Trends. Date format: US or European. Usage colors on or off, with three color bands you can recolor and re-threshold (30% or more remaining, 11–29%, 10% or less by default).
 
-**Updates.** Check every N minutes: 5 by default, any value from 1 to 1,440. After a failed check the app waits at least 15 minutes before trying again. Check now in the menu bar checks immediately.
+**Updates.** Check every N minutes: 5 by default, any value from 1 to 1,440. After a failed check the app waits at least 15 minutes before trying again. Check usage now in the menu bar, or the refresh button on the widget, checks immediately.
 
 **Troubleshooting.** Save report… writes a plain-text report you can send to the developer: app and tool versions, where the app runs from, whether each tool is signed in, recent checks and the past three days of activity. It never includes account names, emails, passwords or sign-in codes. The activity log lives in ~/Library/Logs/Live AI Usage Widget, keeps three days and stays under 256 KB; nothing is sent automatically.
 
@@ -38,7 +38,7 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 
 The settings window can be resized and remembers its size.
 
-Save settings applies changes. You can close the window at any time; the widget keeps updating while the app runs.
+Changes apply as you make them; there is no Save button. You can close the window at any time; the widget keeps updating while the app runs.
 
 ## What it shows
 

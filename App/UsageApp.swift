@@ -24,7 +24,7 @@ import UniformTypeIdentifiers
         DispatchQueue.main.async { [weak self] in self?.checkForUpdates() }
         links = URLRouter.shared.$refresh.sink { [weak self] requested in
             guard requested else { return }
-            DispatchQueue.main.async { URLRouter.shared.refresh = false; self?.refresh() }
+            DispatchQueue.main.async { URLRouter.shared.refresh = false; self?.refresh(force: true) }
         }
     }
     /// `reset` drops those accounts' readings too, for example after signing in again.
@@ -44,7 +44,6 @@ import UniformTypeIdentifiers
             }
             status = StatusStore.load()
             WidgetCenter.shared.reloadAllTimelines()
-            message = "Saved"
         } catch { message = "Couldn't save settings. Check the color percentages, or reinstall the app." }
     }
     /// Set only by the README picture renderer, which has no app bundle.
@@ -140,6 +139,12 @@ import UniformTypeIdentifiers
             catch { message = "Couldn't save the report. Try another folder." }
         }
     }
+    static func changed(_ old: WidgetStatus?, _ new: WidgetStatus?) -> Bool {
+        ["claude", "codex"].contains { provider in
+            let a = old?.usage?[provider], b = new?.usage?[provider]
+            return a?.observedAt != b?.observedAt || a?.refresh?.status != b?.refresh?.status || a?.refresh?.lastAttemptAt != b?.refresh?.lastAttemptAt
+        }
+    }
     func installed(_ provider: String) -> Bool { (try? UsageReader.find(provider)) != nil }
     /// The one name used for each account everywhere: menus, buttons, settings, widget and docs.
     func toolName(_ provider: String) -> String { WidgetStatus.name(provider) }
@@ -204,6 +209,17 @@ import UniformTypeIdentifiers
     /// Accounts between a Connect click and the reading that follows it.
     @Published var connecting: Set<String> = []
     private var refreshAgain = false
+    private var forceAgain = false
+    private var pendingSave: Task<Void, Never>?
+    /// Settings apply as they change; a short pause lets a color drag or typing finish first.
+    func saveSoon() {
+        pendingSave?.cancel()
+        pendingSave = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled, let self else { return }
+            self.save()
+        }
+    }
     private var lastSummary = ""
     @Published var signInLink: [String: URL] = [:]
     @Published var signedIn: [String: Bool] = [:]
@@ -291,7 +307,7 @@ import UniformTypeIdentifiers
     }
     func refresh(force: Bool = false) {
         // A request during a check runs once that check ends, so a new connection is never skipped.
-        guard !busy else { refreshAgain = true; return }
+        guard !busy else { refreshAgain = true; forceAgain = forceAgain || force; return }
         let settings = self.settings
         // Nothing to check until an account is turned on; stay quiet instead of reporting.
         guard !settings.enabled.isEmpty else { message = ""; connecting = []; return }
@@ -304,12 +320,13 @@ import UniformTypeIdentifiers
             }.value
             defer {
                 busy = false
-                if refreshAgain { refreshAgain = false; refresh() }
+                if refreshAgain { refreshAgain = false; let again = forceAgain; forceAgain = false; refresh(force: again) }
             }
             guard settings.generation == self.settings.generation else { refreshAgain = true; return }
             connecting.subtract(settings.enabled)
             guard let payload else { Diagnostics.log("Check: couldn't run"); message = "Couldn't check usage. Make sure Claude Code or ChatGPT Codex is installed and signed in."; return }
             do {
+                let before = status
                 status = try StatusStore.publishUsage(input: payload)
                 let summary = settings.enabled.map { provider -> String in
                     let usage = status?.usage?[provider]
@@ -319,7 +336,8 @@ import UniformTypeIdentifiers
                 }.joined(separator: " | ")
                 // Only changes are written, so a quiet day adds a line or two, not hundreds.
                 if summary != lastSummary { Diagnostics.log("Check: " + summary); lastSummary = summary }
-                WidgetCenter.shared.reloadAllTimelines()
+                // macOS limits how often a background app may redraw widgets; spend that only on real changes.
+                if force || Self.changed(before, status) { WidgetCenter.shared.reloadAllTimelines() }
                 message = status?.usageFailureText() ?? ""
             } catch { message = "Couldn't save the readings. Try reinstalling the app." }
         }
@@ -348,9 +366,10 @@ import UniformTypeIdentifiers
             SettingsView(model: model)
                 .onAppear { model.refresh() }
                 .modifier(WidgetLinks())
-                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
+                .handlesExternalEvents(preferring: ["settings"], allowing: ["settings"])
         }
-        .handlesExternalEvents(matching: ["*"])
+        // Only the widget's gear opens this window; its refresh button checks usage quietly.
+        .handlesExternalEvents(matching: ["settings"])
         .windowResizability(.contentMinSize)
         .commands { CommandGroup(replacing: .appSettings) { SettingsCommand() } }
         // Menu bar icon instead of a Dock icon. Its label stays alive, so it also opens the window on request.
@@ -393,7 +412,7 @@ struct MenuContent: View {
         }
         Divider()
         Button { open() } label: { Label("Settings…", systemImage: "gearshape") }
-        Button { model.refresh(force: true) } label: { Label("Check now", systemImage: "arrow.clockwise") }.disabled(model.settings.enabled.isEmpty)
+        Button { model.refresh(force: true) } label: { Label("Check usage now", systemImage: "arrow.clockwise") }.disabled(model.settings.enabled.isEmpty)
         Divider()
         Button { NSApp.terminate(nil) } label: { Label("Quit Live AI Usage Widget", systemImage: "power") }
     }
@@ -622,23 +641,22 @@ struct SettingsView: View {
             }
         }.formStyle(.grouped)
             .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Settings apply as they change, so there is no Save button.
+            if setupDone || !model.message.isEmpty {
             VStack(spacing: 6) {
-                HStack(spacing: 12) {
-                    if setupDone {
-                        Button { showSetupHelp.toggle() } label: { Text(showSetupHelp ? "Hide setup help" : "Setup help").frame(width: 130) }
-                    }
-                    Button {
-                        // Finish any number still being typed, then save it with everything else.
-                        NSApp.keyWindow?.makeFirstResponder(nil)
-                        DispatchQueue.main.async { model.save(); model.refresh() }
-                    } label: { Text("Save settings").frame(width: 130) }
-                        .keyboardShortcut(.defaultAction)
+                if setupDone {
+                    Button { showSetupHelp.toggle() } label: { Text(showSetupHelp ? "Hide setup help" : "Setup help").frame(width: 130) }
                 }
-                // The line keeps its space when empty so messages never move the window's contents.
-                Text(model.message.isEmpty ? " " : model.message).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            }.padding(.vertical, 14).frame(maxWidth: .infinity).background(.bar)
+                if !model.message.isEmpty { Text(model.message).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+            }.padding(.vertical, 12).frame(maxWidth: .infinity).background(.bar)
+            }
             }
             .frame(minWidth: 480, idealWidth: 520, minHeight: 420, idealHeight: 640)
+            .onChange(of: model.settings) { old, new in
+                model.saveSoon()
+                // A new check interval or account choice takes effect right away.
+                if old.refreshMinutes != new.refreshMinutes { model.refresh() }
+            }
             .background(WindowSizeMemory(name: "Settings"))
             .onAppear {
                 NSApp.activate(ignoringOtherApps: true); checkWidgets()

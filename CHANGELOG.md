@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Settings apply as you change them; the Save settings button is gone. The widget no longer shows "Failed to load" when its numbers are only old: the app now redraws the widget only when readings change (macOS was ignoring once-a-minute redraws), and old readings say "Old reading" with their time. The widget's refresh button checks usage without opening Settings. The menu item is now "Check usage now" and always runs, even if a regular check is under way.
+
 ## 1.1.3
 
 The settings window opens at the top with no cursor in any box; the number boxes take the cursor only when clicked.

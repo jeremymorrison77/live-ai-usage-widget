@@ -130,7 +130,8 @@ struct TrendsStatusView: View {
         let failed = status?.usageWarning(at: date) != nil
         return HStack(spacing: 3) {
             if failed { Image(systemName: "exclamationmark.triangle.fill") }
-            Text(failed ? (status?.usageFailureText() ?? "Failed to load") : (compact ? "" : "Last refresh ") + WidgetStatus.updateDateLabel(status?.usageObservedAt))
+            // Only a real failed check says "Failed"; readings that are simply old say so.
+            Text(failed ? (status?.usageFailureText() ?? (compact ? "Old · " : "Old reading · ") + WidgetStatus.updateDateLabel(status?.usageObservedAt)) : (compact ? "" : "Last refresh ") + WidgetStatus.updateDateLabel(status?.usageObservedAt))
                 .lineLimit(1).minimumScaleFactor(0.8)
             Spacer(minLength: 2)
             Link(destination: URL(string: "live-ai-usage-widget://refresh")!) { Image(systemName: "arrow.clockwise") }

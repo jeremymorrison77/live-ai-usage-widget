@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-struct WidgetSettings: Codable {
+struct WidgetSettings: Codable, Equatable {
     var enabled: [String] = []
     var generation = "initial"
     var usDates = false
