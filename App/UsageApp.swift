@@ -88,6 +88,8 @@ import UniformTypeIdentifiers
         Task {
             do {
                 try await Updater.install(update)
+                // Settings comes back after the update if it was open when Update was clicked.
+                UserDefaults.standard.set(SettingsView.settingsWindows.contains { $0.isVisible }, forKey: "reopenSettingsAfterUpdate")
                 Updater.stopWidgetHelpers()
                 NSApp.terminate(nil)
             } catch {
@@ -577,18 +579,23 @@ struct SettingsView: View {
     private var anyConnected: Bool {
         model.settings.enabled.contains { model.status?.usage?[$0]?.refresh?.status == .ok && model.status?.usage?[$0]?.isStale(at: Date()) == false }
     }
+    static var settingsWindows: [NSWindow] { NSApp.windows.filter { $0.identifier?.rawValue.hasPrefix("main") == true } }
     private func checkWidgets() {
         guard !Self.sample else { return }
         WidgetCenter.shared.getCurrentConfigurations { result in
             let count = (try? result.get())?.count
             DispatchQueue.main.async {
                 widgetsPlaced = count
-                // Once fully set up, a fresh launch (such as at login) stays in the menu bar.
+                // Once fully set up, a fresh launch (such as at login, or after an update started from the menu) stays in
+                // the menu bar. The window is kept invisible until this is decided, so it never flashes.
                 guard !Self.launchHandled else { return }
                 Self.launchHandled = true
-                if !model.settings.enabled.isEmpty && (count ?? 0) > 0 && !URLRouter.shared.settingsRequested {
+                let reopen = UserDefaults.standard.bool(forKey: "reopenSettingsAfterUpdate")
+                UserDefaults.standard.removeObject(forKey: "reopenSettingsAfterUpdate")
+                if !reopen && !model.settings.enabled.isEmpty && (count ?? 0) > 0 && !URLRouter.shared.settingsRequested {
                     dismissWindow(id: "main")
                 }
+                Self.settingsWindows.forEach { $0.alphaValue = 1 }
             }
         }
     }
@@ -719,6 +726,9 @@ struct SettingsView: View {
             }
             .background(WindowSizeMemory(name: "Settings"))
             .onAppear {
+                // Until the launch decides whether to show Settings, keep the window invisible (no flash at login or after updates).
+                if !Self.launchHandled { Self.settingsWindows.forEach { $0.alphaValue = 0 } }
+                Diagnostics.log("Settings opened (windows: \(NSApp.windows.compactMap { $0.identifier?.rawValue }.joined(separator: ", ")))")
                 NSApp.activate(ignoringOtherApps: true); checkWidgets()
                 // Nothing is selected when the window opens, not even the first percentage field.
                 // macOS puts the cursor in the first text box and scrolls down to it; undo both so the window opens at the top.
