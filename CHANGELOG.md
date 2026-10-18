@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.7
 
 Works with a Claude Code that has never been opened in Terminal: its one-time welcome screens are answered (keep the suggested text style, continue past the safety notes, decline the optional Terminal changes). If Claude Code ever stalls, the activity log records what it last showed.
 
