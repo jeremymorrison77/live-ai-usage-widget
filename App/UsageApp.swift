@@ -205,7 +205,7 @@ import Combine
     @StateObject private var model = UsageModel()
     var body: some Scene {
         // The setup window is the app's only window; closing it leaves collection running.
-        Window("Live AI Usage Widget", id: "main") {
+        Window("Live AI Usage Widget Settings", id: "main") {
             SettingsView(model: model)
                 .onAppear { model.refresh() }
                 .modifier(WidgetLinks())
@@ -232,15 +232,16 @@ struct MenuContent: View {
         openWindow(id: "main")
     }
     var body: some View {
-        // Same words and actions as the Accounts rows in the settings window.
+        // Same words as the Accounts rows in the settings window; disconnecting is only offered there.
         ForEach(["claude", "codex"], id: \.self) { provider in
             let name = provider == "claude" ? "Claude" : "ChatGPT"
+            let installed = model.installed(provider)
             let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
-            if model.installed(provider) { Text(name + " · Installed") }
-            else { Button(name + " · Install " + model.toolName(provider)) { model.install(provider) } }
-            if let busy = model.working[provider] { Text("    " + busy) }
-            else if connected { Button { model.disconnect(provider) } label: { Label("Connected — click to disconnect", systemImage: "checkmark.circle.fill") } }
-            else { Button { open(); model.connect(provider) } label: { Label("Connect", systemImage: "person.crop.circle") } }
+            Text(name + " · " + (installed ? "Installed" : "Not installed"))
+            if let busy = model.working[provider] { Text(busy) }
+            else if !installed { Button("Install " + model.toolName(provider)) { model.install(provider) } }
+            else if connected { Button { open() } label: { Label { Text("Connected") } icon: { Image(nsImage: MenuIcon.check) } } }
+            else { Button("Connect") { open(); model.connect(provider) } }
         }
         Divider()
         Button("Settings…") { open() }
@@ -252,6 +253,13 @@ struct MenuContent: View {
 
 /// The app icon's ring and pulse line, drawn as a template so macOS tints it for the menu bar.
 enum MenuIcon {
+    /// A green check that keeps its color in the menu (not a template image).
+    static let check: NSImage = {
+        let config = NSImage.SymbolConfiguration(paletteColors: [.white, .systemGreen])
+        let image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: "Connected")?.withSymbolConfiguration(config) ?? NSImage()
+        image.isTemplate = false
+        return image
+    }()
     static let image: NSImage = {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { _ in
             let ring = NSBezierPath()
@@ -283,15 +291,17 @@ struct AccountRow: View {
                 Text(name)
                 Spacer()
                 if busy != nil { ProgressView().controlSize(.small) }
-                if installed { Text("Installed").foregroundStyle(.secondary) }
-                else { Button("Install " + model.toolName(provider)) { model.install(provider) }.buttonStyle(.link).disabled(busy != nil) }
-                Button { connected ? model.disconnect(provider) : model.connect(provider) } label: {
+                Text(installed ? "Installed" : "Not installed").foregroundStyle(.secondary)
+                Button {
+                    if !installed { model.install(provider) } else if connected { model.disconnect(provider) } else { model.connect(provider) }
+                } label: {
                     Group {
-                        if connected && hovering { Label("Disconnect", systemImage: "xmark.circle").foregroundStyle(.red) }
+                        if !installed { Text(busy != nil ? "Installing…" : "Install " + model.toolName(provider)) }
+                        else if connected && hovering { Label("Disconnect", systemImage: "xmark.circle").foregroundStyle(.red) }
                         else if connected { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
                         else if busy != nil { Text("Connecting…") }
                         else { Label("Connect", systemImage: "person.crop.circle") }
-                    }.frame(width: 120)
+                    }.frame(width: 140)
                 }
                 .disabled(busy != nil)
                 .onHover { hovering = $0 }
@@ -361,7 +371,6 @@ struct SettingsView: View {
                     if (widgetsPlaced ?? 0) > 0 { Text("On desktop").foregroundStyle(.secondary) }
                     else { Button("Show me how") { showWidgetHelp = true } }
                 }
-                Text("You can close this window. The widget keeps updating while the app is running. Reopen this window from the menu bar icon or the widget's gear button.").font(.caption).foregroundStyle(.secondary)
             } header: { Text("Get started") }
             }
             Section("General") {
