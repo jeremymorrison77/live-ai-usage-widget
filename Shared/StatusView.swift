@@ -122,6 +122,8 @@ struct UsageStatusView: View {
             }
             }
             .opacity(stale ? 0.55 : 1)
+            // Dims the instant the refresh button is clicked, before the widget has redrawn.
+            .invalidatableContent()
             .frame(maxHeight: compact || large ? .infinity : nil)
             .accessibilityElement(children: .combine)
         }

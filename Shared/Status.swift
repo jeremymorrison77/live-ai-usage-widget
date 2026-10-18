@@ -228,6 +228,8 @@ struct WidgetStatus: Codable {
     var usageFailure: (agent: String, refresh: UsageRefresh)? {
         ["claude", "codex"].compactMap { key -> (agent: String, refresh: UsageRefresh)? in
             guard let refresh = usage?[key]?.refresh, refresh.status == .failed else { return nil }
+            // Being asked to wait (rate limited) isn't a failure while the last reading is still fresh.
+            if refresh.failureReason == .rateLimited, usage?[key]?.isStale(at: Date()) == false { return nil }
             return (Self.name(key), refresh)
         }.max { ($0.refresh.lastFailureAt ?? $0.refresh.lastAttemptAt ?? .distantPast) <
             ($1.refresh.lastFailureAt ?? $1.refresh.lastAttemptAt ?? .distantPast) }

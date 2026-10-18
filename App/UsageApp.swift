@@ -220,7 +220,9 @@ import UniformTypeIdentifiers
         }
     }
     func isConnected(_ provider: String) -> Bool {
-        status?.usage?[provider]?.refresh?.status == .ok && status?.usage?[provider]?.isStale(at: Date()) == false
+        // A rate-limited check still counts as connected while the last reading is fresh.
+        let usage = status?.usage?[provider]
+        return (usage?.refresh?.status == .ok || usage?.refresh?.failureReason == .rateLimited) && usage?.isStale(at: Date()) == false
     }
     /// Provider → what is happening right now, shown in the Connect window.
     @Published var working: [String: String] = [:]
@@ -229,6 +231,7 @@ import UniformTypeIdentifiers
     private var refreshAgain = false
     private var forceAgain = false
     @Published var checkingUsage = false
+    private var checkStarted = Date.distantPast
     private var pendingSave: Task<Void, Never>?
     /// Settings apply as they change; a short pause lets a color drag or typing finish first.
     func saveSoon() {
@@ -328,8 +331,12 @@ import UniformTypeIdentifiers
         // A check the user asked for shows on the widget at once, even if a regular check is still running.
         if force && !checkingUsage {
             checkingUsage = true
-            try? StatusStore.setChecking(Date())
-            WidgetCenter.shared.reloadAllTimelines()
+            checkStarted = Date()
+            // The widget's own button already marked the check and redrew itself; only the menu needs to.
+            if StatusStore.load()?.checking(at: Date()) != true {
+                try? StatusStore.setChecking(Date())
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         }
         // A request during a check runs once that check ends, so a new connection is never skipped.
         guard !busy else { refreshAgain = true; forceAgain = forceAgain || force; return }
@@ -346,10 +353,15 @@ import UniformTypeIdentifiers
             defer {
                 busy = false
                 if force {
-                    checkingUsage = false
-                    try? StatusStore.setChecking(nil)
-                    status = StatusStore.load()
-                    WidgetCenter.shared.reloadAllTimelines()
+                    // Keep "Checking…" up for at least two seconds so a quick check is still seen.
+                    let wait = max(0, 2 - Date().timeIntervalSince(checkStarted))
+                    DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
+                        guard let self else { return }
+                        self.checkingUsage = false
+                        try? StatusStore.setChecking(nil)
+                        self.status = StatusStore.load()
+                        WidgetCenter.shared.reloadAllTimelines()
+                    }
                 }
                 if refreshAgain { refreshAgain = false; let again = forceAgain; forceAgain = false; refresh(force: again) }
             }
