@@ -34,8 +34,8 @@ struct Provider: TimelineProvider {
         // While a requested check runs, one entry a second turns the spinner. Mac draws every entry before showing
         // the first, so only a few seconds are planned at a time; the widget asks again when they run out.
         if let since = status?.checkingSince, status?.checking(at: now) == true {
-            let ticks = (1...8).map { StatusEntry(date: now.addingTimeInterval(Double($0)), status: status) }
-            completion(Timeline(entries: [StatusEntry(date: now, status: status)] + ticks, policy: .after(now.addingTimeInterval(8))))
+            let ticks = (1...3).map { StatusEntry(date: now.addingTimeInterval(Double($0)), status: status) }
+            completion(Timeline(entries: [StatusEntry(date: now, status: status)] + ticks, policy: .after(now.addingTimeInterval(3))))
             return
         }
         completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(300))))

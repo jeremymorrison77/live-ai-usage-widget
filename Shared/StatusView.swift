@@ -86,7 +86,7 @@ struct UsageStatusView: View {
             let visible = phase == .shown ? 1.0 : 0.0
             // Widgets allow up to two seconds of animation; growth uses all of it, slowing to a stop. Only growth moves.
             let grow: Animation? = phase == .shown ? .easeOut(duration: 2) : nil
-            let fade = Animation.easeOut(duration: 0.4)
+            let fade = Animation.easeOut(duration: 0.25)
             HStack(spacing: compact ? 5 : 8) {
                 if settings.style == "solar" {
                     ZStack {
