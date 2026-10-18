@@ -39,6 +39,55 @@ import Combine
             message = "Saved"
         } catch { message = "Couldn't save settings. Check the color percentages, or reinstall the app." }
     }
+    func installed(_ provider: String) -> Bool { (try? UsageReader.find(provider)) != nil }
+    func toolName(_ provider: String) -> String { provider == "claude" ? "Claude Code" : "Codex" }
+    /// Turns an account on and does whatever is missing: install, browser sign-in, then a fresh reading.
+    func connect(_ provider: String) {
+        if !settings.enabled.contains(provider) {
+            settings.enabled = ["claude", "codex"].filter { $0 == provider || settings.enabled.contains($0) }
+            settings.generation = UUID().uuidString
+            save()
+        }
+        let probe = self.probe
+        Task {
+            if !installed(provider) {
+                await installNow(provider)
+                guard installed(provider) else { return }
+            }
+            working[provider] = "Checking sign-in…"
+            try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
+            let signed = await Task.detached { UsageReader.signedIn(provider, directory: probe) }.value
+            working[provider] = nil
+            signedIn[provider] = signed
+            if signed == true { checkConnection() } else { signIn(provider) }
+        }
+    }
+    /// Only stops showing this account; the official tool stays signed in.
+    func disconnect(_ provider: String) {
+        settings.enabled.removeAll { $0 == provider }
+        settings.generation = UUID().uuidString
+        save()
+        message = ""
+    }
+    /// First launch: turn on and connect any account whose official tool is installed and signed in.
+    func autoDetect() {
+        guard !settings.autoDetected else { return }
+        settings.autoDetected = true
+        save()
+        let probe = self.probe
+        Task {
+            try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
+            var found: [String] = []
+            for provider in ["claude", "codex"] where installed(provider) {
+                working[provider] = "Checking sign-in…"
+                if await Task.detached(operation: { UsageReader.signedIn(provider, directory: probe) }).value == true { found.append(provider) }
+                working[provider] = nil
+            }
+            guard !found.isEmpty else { return }
+            settings.enabled = found
+            checkConnection()
+        }
+    }
     func isConnected(_ provider: String) -> Bool {
         status?.usage?[provider]?.refresh?.status == .ok && status?.usage?[provider]?.isStale(at: Date()) == false
     }
@@ -58,24 +107,23 @@ import Combine
             signedIn[provider] = value
         }
     }
-    func install(_ provider: String) {
+    func install(_ provider: String) { Task { await installNow(provider) } }
+    func installNow(_ provider: String) async {
         let claude = provider == "claude"
         working[provider] = claude ? "Installing Claude Code…" : "Installing Codex…"
         // Claude's official installer, or OpenAI's signed Codex release for Apple Silicon, run in the background.
         let command = claude ? "curl -fsSL https://claude.ai/install.sh | bash"
             : "set -e; d=$(mktemp -d); curl -fsSL https://github.com/openai/codex/releases/latest/download/codex-aarch64-apple-darwin.tar.gz -o \"$d/codex.tgz\"; tar -xzf \"$d/codex.tgz\" -C \"$d\"; mkdir -p \"$HOME/.local/bin\"; mv \"$d/codex-aarch64-apple-darwin\" \"$HOME/.local/bin/codex\"; chmod 755 \"$HOME/.local/bin/codex\"; rm -rf \"$d\""
-        Task {
-            let ok = await Task.detached { () -> Bool in
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/bin/bash")
-                process.arguments = ["-c", command]
-                process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
-                do { try process.run(); process.waitUntilExit(); return process.terminationStatus == 0 } catch { return false }
-            }.value
-            working[provider] = nil
-            message = ok ? (claude ? "Claude Code" : "Codex") + " is installed. Next, sign in." : "Couldn't install it. Use the install link instead."
-            objectWillChange.send()
-        }
+        let ok = await Task.detached { () -> Bool in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/bash")
+            process.arguments = ["-c", command]
+            process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
+            do { try process.run(); process.waitUntilExit(); return process.terminationStatus == 0 } catch { return false }
+        }.value
+        working[provider] = nil
+        message = ok ? "" : "Couldn't install " + toolName(provider) + ". Check your internet connection and try again."
+        objectWillChange.send()
     }
     func signIn(_ provider: String) {
         working[provider] = "Finish signing in in your browser…"
@@ -184,16 +232,15 @@ struct MenuContent: View {
         openWindow(id: "main")
     }
     var body: some View {
-        // Each account with its status; anything not connected opens its Connect window.
+        // Same words and actions as the Accounts rows in the settings window.
         ForEach(["claude", "codex"], id: \.self) { provider in
             let name = provider == "claude" ? "Claude" : "ChatGPT"
-            if !model.settings.enabled.contains(provider) {
-                Button(name + " · Off — Turn on…") { open() }
-            } else if model.isConnected(provider) {
-                Button { open() } label: { Label(name + " · Connected", systemImage: "checkmark.circle.fill") }
-            } else {
-                Button { open(connecting: provider) } label: { Label(name + " · Not connected — Connect…", systemImage: "exclamationmark.circle") }
-            }
+            let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
+            if model.installed(provider) { Text(name + " · Installed") }
+            else { Button(name + " · Install " + model.toolName(provider)) { model.install(provider) } }
+            if let busy = model.working[provider] { Text("    " + busy) }
+            else if connected { Button { model.disconnect(provider) } label: { Label("Connected — click to disconnect", systemImage: "checkmark.circle.fill") } }
+            else { Button { open(); model.connect(provider) } label: { Label("Connect", systemImage: "person.crop.circle") } }
         }
         Divider()
         Button("Settings…") { open() }
@@ -221,6 +268,46 @@ enum MenuIcon {
     }()
 }
 
+/// One account: install state beside a single Connect / Connected button that turns it on and off.
+struct AccountRow: View {
+    @ObservedObject var model: UsageModel
+    let provider: String
+    @State private var hovering = false
+    var body: some View {
+        let name = provider == "claude" ? "Claude" : "ChatGPT"
+        let installed = model.installed(provider)
+        let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
+        let busy = model.working[provider]
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(name)
+                Spacer()
+                if busy != nil { ProgressView().controlSize(.small) }
+                if installed { Text("Installed").foregroundStyle(.secondary) }
+                else { Button("Install " + model.toolName(provider)) { model.install(provider) }.buttonStyle(.link).disabled(busy != nil) }
+                Button { connected ? model.disconnect(provider) : model.connect(provider) } label: {
+                    Group {
+                        if connected && hovering { Label("Disconnect", systemImage: "xmark.circle").foregroundStyle(.red) }
+                        else if connected { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
+                        else if busy != nil { Text("Connecting…") }
+                        else { Label("Connect", systemImage: "person.crop.circle") }
+                    }.frame(width: 120)
+                }
+                .disabled(busy != nil)
+                .onHover { hovering = $0 }
+            }
+            if let busy {
+                HStack(spacing: 6) {
+                    Text(busy).font(.caption).foregroundStyle(.secondary)
+                    if let link = model.signInLink[provider] { Link("Open sign-in page", destination: link).font(.caption) }
+                }
+            } else if model.settings.enabled.contains(provider) && !connected, let reason = model.status?.usage?[provider]?.refresh?.failureReason {
+                Text(reason.actionLabel(agent: name)).font(.caption).foregroundStyle(.orange)
+            }
+        }
+    }
+}
+
 struct SettingsCommand: View {
     @Environment(\.openWindow) private var openWindow
     var body: some View { Button("Settings…") { openWindow(id: "main") }.keyboardShortcut(",") }
@@ -228,7 +315,6 @@ struct SettingsCommand: View {
 
 struct SettingsView: View {
     @ObservedObject var model: UsageModel
-    @State private var login: String?
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var widgetsPlaced: Int?
     @State private var showWidgetHelp = false
@@ -236,7 +322,7 @@ struct SettingsView: View {
     @Environment(\.dismissWindow) private var dismissWindow
     private static var launchHandled = false
     // Get started hides itself once every step is done; Setup help brings it back.
-    private var setupDone: Bool { anyConnected && (widgetsPlaced ?? 0) > 0 && launchAtLogin }
+    private var setupDone: Bool { anyConnected && (widgetsPlaced ?? 0) > 0 }
     private var anyConnected: Bool {
         model.settings.enabled.contains { model.status?.usage?[$0]?.refresh?.status == .ok && model.status?.usage?[$0]?.isStale(at: Date()) == false }
     }
@@ -248,7 +334,7 @@ struct SettingsView: View {
                 // Once fully set up, a fresh launch (such as at login) stays in the menu bar.
                 guard !Self.launchHandled else { return }
                 Self.launchHandled = true
-                if !model.settings.enabled.isEmpty && (count ?? 0) > 0 && launchAtLogin && !URLRouter.shared.settingsRequested {
+                if !model.settings.enabled.isEmpty && (count ?? 0) > 0 && !URLRouter.shared.settingsRequested {
                     dismissWindow(id: "main")
                 }
             }
@@ -266,7 +352,7 @@ struct SettingsView: View {
             if !setupDone || showSetupHelp {
             Section {
                 HStack {
-                    step(1, "Turn on Claude, ChatGPT or both, then connect", done: anyConnected)
+                    step(1, "Connect your accounts", done: anyConnected)
                     Spacer()
                 }
                 HStack {
@@ -275,35 +361,18 @@ struct SettingsView: View {
                     if (widgetsPlaced ?? 0) > 0 { Text("On desktop").foregroundStyle(.secondary) }
                     else { Button("Show me how") { showWidgetHelp = true } }
                 }
-                HStack {
-                    step(3, "Open at login so it keeps running", done: launchAtLogin)
-                    Spacer()
-                    Toggle("Open at login", isOn: $launchAtLogin).labelsHidden().onChange(of: launchAtLogin) { _, on in
-                        do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
-                        catch { model.message = "Couldn't change Open at login. Check Login Items in System Settings."; launchAtLogin = SMAppService.mainApp.status == .enabled }
-                    }
-                }
                 Text("You can close this window. The widget keeps updating while the app is running. Reopen this window from the menu bar icon or the widget's gear button.").font(.caption).foregroundStyle(.secondary)
             } header: { Text("Get started") }
             }
+            Section("General") {
+                Toggle("Open at login", isOn: $launchAtLogin).onChange(of: launchAtLogin) { _, on in
+                    do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
+                    catch { model.message = "Couldn't change Open at login. Check Login Items in System Settings."; launchAtLogin = SMAppService.mainApp.status == .enabled }
+                }
+            }
             Section("Accounts") {
                 ForEach(["claude", "codex"], id: \.self) { provider in
-                    HStack {
-                        Toggle(provider == "claude" ? "Claude" : "ChatGPT", isOn: Binding(
-                            get: { model.settings.enabled.contains(provider) },
-                            set: { on in
-                                model.settings.generation = UUID().uuidString
-                                model.settings.enabled.removeAll { $0 == provider }
-                                if on { model.settings.enabled.append(provider) }
-                                model.save()
-                            })).toggleStyle(.checkbox)
-                        Spacer()
-                        let connected = model.isConnected(provider)
-                        Button { login = provider } label: {
-                            Label(connected ? "Connected" : "Connect", systemImage: connected ? "checkmark.circle.fill" : "person.crop.circle")
-                                .foregroundStyle(connected ? Color.green : Color.primary).frame(width: 110)
-                        }.disabled(!model.settings.enabled.contains(provider))
-                    }
+                    AccountRow(model: model, provider: provider)
                 }
             }
             Section("Appearance") {
@@ -360,11 +429,18 @@ struct SettingsView: View {
             }.padding(.vertical, 14).frame(maxWidth: .infinity).background(.bar)
             }
             .frame(width: 520, height: 640)
-            .onAppear { NSApp.activate(ignoringOtherApps: true); checkWidgets() }
+            .onAppear {
+                NSApp.activate(ignoringOtherApps: true); checkWidgets()
+                // Open at login starts on; after the first launch it follows the user's choice.
+                if !model.settings.autoDetected && SMAppService.mainApp.status != .enabled {
+                    try? SMAppService.mainApp.register(); launchAtLogin = SMAppService.mainApp.status == .enabled
+                }
+                model.autoDetect()
+            }
             .onReceive(URLRouter.shared.$connect) { provider in
                 guard let provider else { return }
                 URLRouter.shared.connect = nil
-                login = provider
+                model.connect(provider)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in checkWidgets() }
             .sheet(isPresented: $showWidgetHelp) {
@@ -379,59 +455,6 @@ struct SettingsView: View {
                     HStack { Spacer(); Button("Done") { showWidgetHelp = false; checkWidgets() }.keyboardShortcut(.defaultAction) }
                 }.padding(24).frame(width: 400)
             }
-            .sheet(item: Binding(get: { login.map(Login.init) }, set: { login = $0?.id })) { item in
-                let claude = item.id == "claude"
-                let name = claude ? "Claude" : "ChatGPT"
-                // Skip the install step when the official tool is already on this Mac.
-                let installed = (try? UsageReader.find(item.id)) != nil
-                VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Connect " + name).font(.headline)
-                        Text("Uses your own account through the official " + (claude ? "Claude Code" : "Codex") + " tool. You never type a password into this app.").font(.caption).foregroundStyle(.secondary)
-                    }
-                    if let reason = model.status?.usage?[item.id]?.refresh?.failureReason {
-                        Text(reason.actionLabel(agent: name)).foregroundStyle(.orange)
-                    }
-                    let busy = model.working[item.id]
-                    if installed {
-                        connectRow(1, done: true, title: (claude ? "Claude Code" : "Codex") + " is installed", detail: "Found on this Mac.") { EmptyView() }
-                    } else {
-                        connectRow(1, title: "Install the official tool",
-                                   detail: "Not found on this Mac. Install downloads the official " + (claude ? "Claude Code" : "Codex") + " tool in the background.",
-                                   link: claude ? "https://code.claude.com/docs/en/setup" : "https://learn.chatgpt.com/docs/codex/cli#getting-started") {
-                            Button("Install") { model.install(item.id) }.disabled(busy != nil)
-                        }
-                    }
-                    let signed = model.signedIn[item.id] == true
-                    connectRow(2, done: signed, title: signed ? "Signed in" : "Sign in",
-                               detail: signed ? "Your account is signed in to the official tool." : "Opens your browser to sign in to your own " + name + " account.") {
-                        if !signed { Button("Sign in") { model.signIn(item.id) }.disabled(!installed || busy != nil) }
-                    }
-                    connectRow(3, title: "Check connection", detail: "A green check appears in Accounts once a fresh reading arrives.") {
-                        Button("Check connection") { login = nil; model.checkConnection() }.keyboardShortcut(.defaultAction).disabled(!installed || busy != nil)
-                    }
-                    if let busy {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Text(busy).font(.callout)
-                            if let link = model.signInLink[item.id] { Link("Open sign-in page", destination: link).font(.callout) }
-                        }
-                    }
-                    HStack { Spacer(); Button("Cancel") { login = nil }.keyboardShortcut(.cancelAction) }
-                }.padding(24).frame(width: 460)
-                .onAppear { model.updateSignedIn(item.id) }
-            }
-    }
-    private func connectRow<Action: View>(_ number: Int, done: Bool = false, title: String, detail: String, link: String? = nil, @ViewBuilder action: () -> Action) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle").foregroundStyle(done ? Color.green : Color.secondary).font(.title3)
-            VStack(alignment: .leading, spacing: 2) {
-                if let link, let url = URL(string: link) { Link(title, destination: url).fontWeight(.medium) } else { Text(title).fontWeight(.medium) }
-                Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 8)
-            action()
-        }
     }
     private func percentField(_ value: Double, set: @escaping (Double) -> Void) -> some View {
         PercentField(value: value, commit: set)
@@ -451,7 +474,6 @@ struct SettingsView: View {
             hex.wrappedValue = String(format: "#%02X%02X%02X", Int(rgb.redComponent * 255), Int(rgb.greenComponent * 255), Int(rgb.blueComponent * 255))
         }), supportsOpacity: false).labelsHidden()
     }
-    struct Login: Identifiable { let id: String }
 }
 
 @MainActor final class URLRouter: ObservableObject {
