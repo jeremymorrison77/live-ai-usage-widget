@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.5 (build 26) — 10/18/2026
+
+Terminal lookup fallback (tested: finds /bin/ls through the login shell) and install guard. Notarization Accepted (submission 21baea47-ce46-4d51-81ae-3a801fccd65e; app ZIP SHA-256 9a999e47baf4bbf1b6a0cc3c894a9a61abeb8d7c2ce3844575444c1d33dbd89d).
+
 ## 1.1.4 (build 25) — 10/18/2026
 
 Refresh behavior verified by filming the owner's desktop widget (with permission): Checking within about a second, old bars fade, new bars grow from the left; widget refresh link no longer opens Settings; rate-limit countdown shown. Notarization Accepted (submission c54e84f6-b999-4247-97ba-fd5a23248d46; app ZIP SHA-256 c2761228fba9a199f26fbbf7398c2c9444e35c5bb91b5e150d3ee67ef37d5932).
