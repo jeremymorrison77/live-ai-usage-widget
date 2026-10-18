@@ -376,8 +376,13 @@ extension UsageReader {
             if chunk.isEmpty { break }
             data.append(chunk)
         }
-        let text = String(decoding: data, as: UTF8.self)
-        if provider == "claude" { return text.contains("\"loggedIn\": true") ? true : text.contains("\"loggedIn\": false") ? false : nil }
+        // Terminal output can carry color codes; compare the plain text.
+        let text = plain(data)
+        if provider == "claude" {
+            if !matches("\"loggedIn\"\\s*:\\s*true", text).isEmpty { return true }
+            if !matches("\"loggedIn\"\\s*:\\s*false", text).isEmpty { return false }
+            return nil
+        }
         return text.localizedCaseInsensitiveContains("not logged in") ? false : text.localizedCaseInsensitiveContains("logged in") ? true : nil
     }
 }

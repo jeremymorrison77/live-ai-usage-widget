@@ -232,22 +232,26 @@ struct MenuContent: View {
         openWindow(id: "main")
     }
     var body: some View {
-        // Same words as the Accounts rows in the settings window; disconnecting is only offered there.
+        // One line per account in the settings window's words. Every line has an icon so all text lines up.
         ForEach(["claude", "codex"], id: \.self) { provider in
             let name = provider == "claude" ? "Claude" : "ChatGPT"
             let installed = model.installed(provider)
             let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
-            Button(name + " · " + (installed ? "Installed" : "Not installed")) { open() }
-            if let busy = model.working[provider] { Text(busy) }
-            else if !installed { Button("Install " + model.toolName(provider)) { model.install(provider) } }
-            else if connected { Button { open() } label: { Label { Text("Connected") } icon: { Image(nsImage: MenuIcon.check) } } }
-            else { Button("Connect") { open(); model.connect(provider) } }
+            if let busy = model.working[provider] {
+                Button { open() } label: { Label(name + " · " + busy, systemImage: "hourglass") }
+            } else if !installed {
+                Button { model.install(provider) } label: { Label(name + " · Not installed · Install " + model.toolName(provider), systemImage: "arrow.down.circle") }
+            } else if connected {
+                Button { open() } label: { Label { Text(name + " · Installed · Connected") } icon: { Image(nsImage: MenuIcon.check) } }
+            } else {
+                Button { open(); model.connect(provider) } label: { Label(name + " · Installed · Connect", systemImage: "person.crop.circle") }
+            }
         }
         Divider()
-        Button("Settings…") { open() }
-        Button("Check now") { model.refresh(force: true) }.disabled(model.settings.enabled.isEmpty)
+        Button { open() } label: { Label("Settings…", systemImage: "gearshape") }
+        Button { model.refresh(force: true) } label: { Label("Check now", systemImage: "arrow.clockwise") }.disabled(model.settings.enabled.isEmpty)
         Divider()
-        Button("Quit Live AI Usage Widget") { NSApp.terminate(nil) }
+        Button { NSApp.terminate(nil) } label: { Label("Quit Live AI Usage Widget", systemImage: "power") }
     }
 }
 
