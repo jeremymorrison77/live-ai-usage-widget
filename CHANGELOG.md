@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+After a one-click update the widget's background helper is restarted, so the widget runs the new version straight away (before, it could keep running the old one until the Mac restarted).
+
 ## 1.1.5
 
 If Claude Code or Codex is not in one of the usual places, the app asks the person's own Terminal setup where it is (so fnm, asdf, mise, pnpm and custom npm folders are found), and it checks again right before installing so it never adds a second copy.

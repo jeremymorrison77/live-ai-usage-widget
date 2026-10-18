@@ -88,6 +88,7 @@ import UniformTypeIdentifiers
         Task {
             do {
                 try await Updater.install(update)
+                Updater.stopWidgetHelpers()
                 NSApp.terminate(nil)
             } catch {
                 Diagnostics.log("Update failed: \(error)")

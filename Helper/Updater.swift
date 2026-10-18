@@ -96,6 +96,19 @@ enum Updater {
         try helper.run()
     }
 
+    /// The widget's helper keeps running the old copy after an update unless it is stopped; macOS then starts the
+    /// new one the next time the widget draws. Only processes running from this app's own widget folder are stopped.
+    static func stopWidgetHelpers(of bundle: URL = Mover.originalURL()) {
+        let folder = bundle.appendingPathComponent("Contents/PlugIns").path + "/"
+        var pids = [pid_t](repeating: 0, count: 4096)
+        let count = Int(proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size)))
+        for pid in pids.prefix(max(0, count)) where pid > 0 {
+            var path = [CChar](repeating: 0, count: 4096)
+            guard proc_pidpath(pid, &path, UInt32(path.count)) > 0 else { continue }
+            if String(cString: path).hasPrefix(folder) { kill(pid, SIGTERM) }
+        }
+    }
+
     /// The new copy must pass Apple's notarization check and be signed by the same developer team as this app.
     static func trusted(_ app: URL, like current: URL) -> Bool {
         guard let team = teamID(current) ?? teamID(Bundle.main.bundleURL), teamID(app) == team else { return false }
