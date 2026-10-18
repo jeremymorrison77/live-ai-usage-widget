@@ -226,6 +226,16 @@ struct WidgetStatus: Codable {
     }
     /// The limits each account usually reports, shown as placeholders until its first reading arrives.
     static func expectedWindows(_ provider: String) -> [String] { provider == "claude" ? ["5-hour", "weekly all", "weekly Fable"] : ["5-hour", "weekly"] }
+    /// Limits this account's plan does not have, judged from a real reading. Per the official plan pages
+    /// (10/18/2026): ChatGPT Pro has no 5-hour limit, and only Claude Max and Premium seats have a weekly Fable
+    /// limit. Any model-specific weekly limit counts as that plan's model limit.
+    static func notInPlan(_ provider: String, have: [String]) -> [String] {
+        guard !have.isEmpty else { return [] }
+        return expectedWindows(provider).filter { want in
+            if want == "weekly Fable" { return !have.contains { $0.hasPrefix("weekly ") && $0 != "weekly all" } }
+            return !have.contains(want)
+        }
+    }
     /// The one name used for each account everywhere.
     static func name(_ provider: String) -> String { provider == "claude" ? "Claude Code" : "ChatGPT Codex" }
     static func updateDateLabel(_ date: Date?, calendar: Calendar = .current) -> String {

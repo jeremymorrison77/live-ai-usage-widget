@@ -62,6 +62,12 @@ struct UsageHistoryTests {
         precondition(StatusStore.load(from: destination)?.usageHistory?[id]?.count == 2)
         let saved = try Data(contentsOf: destination)
         precondition(saved.count < 262144)
-        print("Usage history checks passed: real rates, quiet intervals, resets, gaps, missing reset identity, clock skew, duplicates, retention, bounded storage, standalone store and failed-refresh persistence")
+        // Limits a plan doesn't have: ChatGPT Pro has no 5-hour limit; Claude Pro has no model-specific weekly limit.
+        precondition(WidgetStatus.notInPlan("codex", have: ["weekly"]) == ["5-hour"])
+        precondition(WidgetStatus.notInPlan("codex", have: ["5-hour", "weekly"]).isEmpty)
+        precondition(WidgetStatus.notInPlan("claude", have: ["5-hour", "weekly all"]) == ["weekly Fable"])
+        precondition(WidgetStatus.notInPlan("claude", have: ["5-hour", "weekly all", "weekly Opus"]).isEmpty)
+        precondition(WidgetStatus.notInPlan("claude", have: []).isEmpty)
+        print("Usage history checks passed: real rates, quiet intervals, resets, gaps, missing reset identity, clock skew, duplicates, retention, bounded storage, standalone store and failed-refresh persistence, limits not in plan")
     }
 }

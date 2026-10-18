@@ -453,6 +453,12 @@ struct SettingsView: View {
                         if !on { model.settings.hiddenSmallMetrics.append(key) }
                     }))
                 }
+                // Limits the account's plan doesn't have stay listed, grayed out, so nothing seems to be missing.
+                ForEach(missingChoices, id: \.self) { key in
+                    Toggle(isOn: .constant(false)) {
+                        HStack { Text(metricTitle(key)); Spacer(); Text("Not included in your plan").font(.caption) }
+                    }.disabled(true)
+                }
                 Text("Up to five readings, in provider order. Medium and large show every available reading.").font(.caption).foregroundStyle(.secondary)
             }
             }
@@ -512,6 +518,11 @@ struct SettingsView: View {
         model.settings.enabled.flatMap { provider in
             let names = model.status?.usage?[provider]?.windows.map(\.window) ?? WidgetStatus.expectedWindows(provider)
             return names.map { UsageHistory.key(provider, $0) }
+        }
+    }
+    private var missingChoices: [String] {
+        model.settings.enabled.flatMap { provider in
+            WidgetStatus.notInPlan(provider, have: model.status?.usage?[provider]?.windows.map(\.window) ?? []).map { UsageHistory.key(provider, $0) }
         }
     }
     private func metricTitle(_ key: String) -> String {
