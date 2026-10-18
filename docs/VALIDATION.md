@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.8 (build 29) — 10/18/2026
+
+Release ZIP installed on a fresh macOS 15.7.7 virtual Mac with Claude Code 2.1.302 signed in but never opened (the tester's state): Connect → folder trust ok → readings in about 12 seconds. Same state with 1.1.7 reproduced the tester's stall. Notarization Accepted (submission 65086bdb-0929-49d0-9e38-0c017eb53784; app ZIP SHA-256 ddb7277a5e0288482bcf8b3f4bf314dc4629924f8e3a5fd4f07f3f39aecfcbaa).
+
 ## 1.1.7 (build 28) — 10/18/2026
 
 First-run Claude Code handling tested with a scripted fake that shows the three welcome screens; the real fresh-install case awaits the tester's update. Notarization Accepted (submission 24ee8af2-33f8-47ba-9198-e5f629dbea5b; app ZIP SHA-256 3e076324cdcc81e7c1016f17cbc6868e8ea2b5502e2fd4b366e38f753543d663).
