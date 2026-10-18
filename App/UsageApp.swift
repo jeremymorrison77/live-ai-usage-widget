@@ -401,7 +401,7 @@ struct SettingsView: View {
                     Spacer()
                 }
                 HStack {
-                    step(2, "Add the widget to your desktop", done: (widgetsPlaced ?? 0) > 0)
+                    step(2, "Add “Live AI Usage Widget” to your desktop", done: (widgetsPlaced ?? 0) > 0)
                     Spacer()
                     if (widgetsPlaced ?? 0) > 0 { Text("On desktop").foregroundStyle(.secondary) }
                     else { Button("Show me how") { showWidgetHelp = true } }
@@ -504,11 +504,12 @@ struct SettingsView: View {
             .sheet(isPresented: $showWidgetHelp) {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Add the widget to your desktop").font(.headline)
+                        // The name comes first, so it is still in view when the widget gallery covers the rest.
+                        Text("Search for “Live AI Usage Widget”").font(.headline)
                         Text("macOS doesn't let apps place widgets themselves, so this step is yours.").font(.caption).foregroundStyle(.secondary)
                     }.padding(.bottom, 8)
                     Text("1. Right-click an empty spot on your desktop and choose Edit Widgets.")
-                    Text("2. Search for Live AI Usage Widget.")
+                    Text("2. Type Live AI Usage Widget in the search box.")
                     Text("3. Pick a size and drag it onto your desktop, then click Done.")
                     HStack { Spacer(); Button("Done") { showWidgetHelp = false; checkWidgets() }.keyboardShortcut(.defaultAction) }
                 }.padding(24).frame(width: 400)

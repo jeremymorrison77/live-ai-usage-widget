@@ -45,6 +45,12 @@ import Darwin
         // A real PTY protocol using synthetic panel output, never the real provider.
         let date = Date(); let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.timeZone = TimeZone(secondsFromGMT: 0); formatter.dateFormat = "h:mma"
         let reset = formatter.string(from: date.addingTimeInterval(3600))
+        // Claude Code's sign-in offers "Paste code here if prompted" and must keep running until the browser finishes.
+        let login = try script("printf 'Opening browser to sign in: https://claude.ai/oauth/authorize?x=1\\nPaste code here if prompted > '\nsleep 2\nprintf '\\nLogin successful.\\n'\n")
+        var opened: URL?
+        let started = Date()
+        try UsageReader.signIn("claude", directory: directory, binary: login, timeout: 10) { opened = $0 }
+        precondition(opened?.host == "claude.ai" && Date().timeIntervalSince(started) >= 1.5, "Sign-in must wait for the tool to finish")
         let fakeClaude = try script("printf '$ '\nread line\nprintf '\\nCurrent session\\n12%% used\\nResets \(reset) (UTC)\\n'\nsleep 10\n")
         let receipt = try UsageReader.claude(directory: directory, binary: fakeClaude, timeout: 6)
         precondition((receipt["windows"] as! [[String: Any]])[0]["used_percent"] as? Double == 12)

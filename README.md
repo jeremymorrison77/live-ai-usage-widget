@@ -22,7 +22,7 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 
 **Setup help** (hides itself once both steps are done; the Setup help button brings it back)
 1. Connect Claude Code, ChatGPT Codex or both.
-2. Add the widget to your desktop: right-click an empty spot on the desktop, choose Edit Widgets, search for Live AI Usage Widget, pick a size and drag it on. macOS doesn't let apps place widgets themselves. Show me how walks through it, and the step turns green once a widget is placed.
+2. Add "Live AI Usage Widget" to your desktop: right-click an empty spot on the desktop, choose Edit Widgets, search for Live AI Usage Widget, pick a size and drag it on. macOS doesn't let apps place widgets themselves. Show me how walks through it, and the step turns green once a widget is placed.
 
 **General.** Open at login, on by default.
 

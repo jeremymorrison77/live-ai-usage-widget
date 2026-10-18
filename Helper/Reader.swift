@@ -106,7 +106,11 @@ enum UsageReader {
     static func find(_ provider: String) throws -> String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let name = provider == "claude" ? "claude" : "codex"
-        var paths = [home + "/.local/bin/" + name, "/opt/homebrew/bin/" + name, "/usr/local/bin/" + name]
+        // Official installer first, then Homebrew and the usual npm, Bun and Volta global folders.
+        var paths = [home + "/.local/bin/" + name, "/opt/homebrew/bin/" + name, "/usr/local/bin/" + name,
+                     home + "/.claude/local/" + name, home + "/.npm-global/bin/" + name, home + "/.bun/bin/" + name, home + "/.volta/bin/" + name]
+        let nvm = home + "/.nvm/versions/node"
+        paths += ((try? FileManager.default.contentsOfDirectory(atPath: nvm)) ?? []).sorted().reversed().map { nvm + "/" + $0 + "/bin/" + name }
         if provider == "codex" {
             paths = ["/Applications/Codex.app/Contents/Resources/codex", "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"] + paths
         }
@@ -346,9 +350,9 @@ extension UsageReader {
     }
 
     /// Runs the official sign-in without Terminal. The tool opens the browser itself; any sign-in link it prints is passed on.
-    static func signIn(_ provider: String, directory: URL, timeout: Double = 300, onLink: @escaping (URL) -> Void) throws {
+    static func signIn(_ provider: String, directory: URL, binary: String? = nil, timeout: Double = 600, onLink: @escaping (URL) -> Void) throws {
         let arguments = provider == "claude" ? ["auth", "login", "--claudeai"] : ["login"]
-        let child = try ChildProcess(binary: find(provider), arguments: arguments, directory: directory.path, terminal: true)
+        let child = try ChildProcess(binary: binary ?? find(provider), arguments: arguments, directory: directory.path, terminal: true)
         defer { child.stop() }
         let start = uptime
         var data = Data(), linked = false
@@ -360,7 +364,8 @@ extension UsageReader {
             if String(decoding: chunk, as: UTF8.self).contains("\u{1b}[6n") { try child.send(Data("\u{1b}[1;1R".utf8)) }
             let text = plain(data)
             if !linked, let match = matches("(https://[^\\s\"'<>]+)", text).first, let url = URL(string: match[1]) { linked = true; onLink(url) }
-            if !matches("(?i)paste (the )?code", text).isEmpty { throw ReaderFailure("interactive_setup_required") }
+            // Claude Code also offers "Paste code here if prompted"; the tool must keep running so the browser's
+            // Authorize can reach it, so that line is not a failure.
         }
         throw ReaderFailure("usage_read_timed_out")
     }
