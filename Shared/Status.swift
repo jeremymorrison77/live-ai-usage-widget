@@ -209,7 +209,7 @@ struct WidgetStatus: Codable {
     /// True while that check runs (never longer than two minutes, in case the app quit mid-check).
     func checking(at date: Date) -> Bool { checkingSince.map { date >= $0.addingTimeInterval(-5) && date.timeIntervalSince($0) < 120 } ?? false }
     /// Readings show as empty while checking and until the reveal moment.
-    func emptied(at date: Date) -> Bool { checking(at: date) || (revealAt.map { date < $0 && $0.timeIntervalSince(date) < 10 } ?? false) }
+    func emptied(at date: Date) -> Bool { checking(at: date) }
     /// Sample readings for the widget gallery only; never written to storage.
     static var preview: WidgetStatus {
         let now = Date(), hour: TimeInterval = 3600

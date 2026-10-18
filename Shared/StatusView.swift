@@ -76,8 +76,11 @@ struct UsageStatusView: View {
             let stale = waiting || status?.usage?[agent]?.isStale(at: date) == true || (window.resetsAt.map { $0 <= date } ?? false)
             let color = waiting ? Color.secondary : settings.color(for: window.leftPercent)
             // While a requested check runs everything sits at zero; the new reading then grows in and eases to a stop.
-            // A check the user asked for: the old reading fades away in place, then the new one grows in from zero.
-            let phase: Phase = status?.checking(at: date) == true ? .fading : status?.emptied(at: date) == true ? .empty : .shown
+            // A check the user asked for: the old reading fades away in place (the click's reload animates that), a second
+            // later it is quietly reset to empty while invisible, and the reload that brings the new reading grows it in.
+            // Mac animates changes between reloads, not between planned moments, which is why the steps fall this way.
+            let since = status?.checkingSince ?? date
+            let phase: Phase = status?.checking(at: date) == true ? (date.timeIntervalSince(since) < 0.9 ? .fading : .empty) : .shown
             let checking = phase != .shown
             let left = waiting ? 0 : phase == .fading ? window.leftPercent : phase == .empty ? 0 : window.leftPercent
             let visible = phase == .shown ? 1.0 : 0.0
@@ -105,14 +108,15 @@ struct UsageStatusView: View {
                         .contentTransition(.numericText(value: left)).animation(grow ?? fade, value: left)
                 }.font(.system(size: large ? 13 : compact ? 10 : 11))
                 if settings.style == "clean" {
-                    GeometryReader { geometry in
-                        // The fill is one full-width piece that slides in from the left, so it grows rather than fades.
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(color.opacity(0.12))
-                            Capsule().fill(color).offset(x: -geometry.size.width * (1 - left / 100))
-                                .animation(grow, value: left)
-                                .opacity(visible).animation(fade, value: visible)
-                        }.clipShape(Capsule())
+                    // The fill is revealed by a mask that stretches from the left: a scale, which widgets animate.
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(color.opacity(0.12))
+                        Capsule().fill(color)
+                            .mask(alignment: .leading) {
+                                Capsule().scaleEffect(x: max(0.001, left / 100), y: 1, anchor: .leading)
+                                    .animation(grow, value: left)
+                            }
+                            .opacity(visible).animation(fade, value: visible)
                     }.frame(height: large ? 5 : 3).padding(.top, 2)
                 }
                 if large || !compact || roomy {
@@ -155,7 +159,7 @@ struct UsageStatusView: View {
             Spacer(minLength: 2)
             if checking {
                 // Widgets can't run a spinner, so a centered arc turns a step with each one-second entry, animated in between.
-                let angle = max(0, date.timeIntervalSince(status?.checkingSince ?? date).rounded()) * 180
+                let angle = (date.timeIntervalSinceReferenceDate.rounded()).truncatingRemainder(dividingBy: 360) * 180
                 Circle().trim(from: 0, to: 0.7)
                     .stroke(style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
                     .frame(width: 9, height: 9)

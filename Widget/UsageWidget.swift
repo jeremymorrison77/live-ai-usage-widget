@@ -28,19 +28,15 @@ struct Provider: TimelineProvider {
         let status = StatusStore.load()
         try? StatusStore.recordTimelineRead(status: status, at: now)
         // Future entries age the visible snapshot even if collection stops.
-        var entries = (Array(0...30) + Array(stride(from: 35, through: 180, by: 5))).map {
+        var entries = Array(stride(from: 0, through: 180, by: 5)).map {
             StatusEntry(date: now.addingTimeInterval(Double($0) * 60), status: status)
         }
-        // While a requested check runs, one entry a second turns the refresh arrow (for at most two minutes).
+        // While a requested check runs, one entry a second turns the spinner. Mac draws every entry before showing
+        // the first, so only a few seconds are planned at a time; the widget asks again when they run out.
         if let since = status?.checkingSince, status?.checking(at: now) == true {
-            let start = max(now, since).timeIntervalSince(since).rounded(.up)
-            let ticks = stride(from: start, to: 120, by: 1).map { StatusEntry(date: since.addingTimeInterval($0), status: status) }
-            entries = ticks + entries.filter { $0.date >= since.addingTimeInterval(120) }
-            entries.insert(StatusEntry(date: now, status: status), at: 0)
-        } else if let reveal = status?.revealAt, reveal > now, reveal.timeIntervalSince(now) < 10 {
-            // Empty now, full a moment later: the change between the two entries animates the growth.
-            entries = [StatusEntry(date: now, status: status)] + entries.map { StatusEntry(date: max($0.date, reveal), status: $0.status) }
-            entries = entries.enumerated().filter { $0.offset == 0 || $0.offset == 1 || $0.element.date > reveal }.map(\.element)
+            let ticks = (1...8).map { StatusEntry(date: now.addingTimeInterval(Double($0)), status: status) }
+            completion(Timeline(entries: [StatusEntry(date: now, status: status)] + ticks, policy: .after(now.addingTimeInterval(8))))
+            return
         }
         completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(300))))
     }
