@@ -95,22 +95,35 @@ import UniformTypeIdentifiers
             guard settings.enabled.contains(provider) else { return name + ": not connected" }
             let usage = status?.usage?[provider]
             let refresh = usage?.refresh
-            return name + ": " + (refresh?.status == .failed ? "last check failed (" + (refresh?.failureReason?.rawValue ?? "unknown") + ")" : "ok")
-                + " · readings " + (usage?.windows.map(\.window).joined(separator: ", ") ?? "none")
-                + " · last reading " + (usage?.observedAt.map(Diagnostics.stamp) ?? "never")
-                + " · last try " + (refresh?.lastAttemptAt.map(Diagnostics.stamp) ?? "never")
+            let result = refresh?.status == .failed ? "last check failed (\(refresh?.failureReason?.rawValue ?? "unknown"))" : "ok"
+            let readings = usage?.windows.map(\.window).joined(separator: ", ") ?? "none"
+            let reading = usage?.observedAt.map(Diagnostics.stamp) ?? "never"
+            let attempt = refresh?.lastAttemptAt.map(Diagnostics.stamp) ?? "never"
+            return "\(name): \(result) · readings \(readings) · last reading \(reading) · last try \(attempt)"
         }
         let path = Bundle.main.bundlePath
-        return ([
-            "Live AI Usage Widget diagnostic report · " + Diagnostics.stamp(Date()),
-            "No account names, emails, passwords or sign-in codes are included.",
-            "",
-            "App: version " + Self.version + " · macOS " + ProcessInfo.processInfo.operatingSystemVersionString,
-            "Running from: " + Diagnostics.clean(path) + (path.contains("/AppTranslocation/") ? " (hidden copy: move to Applications)" : ""),
-            "Open at login: " + (SMAppService.mainApp.status == .enabled ? "on" : "off") + " · automatic updates: " + (settings.autoUpdates ? "on" : "off"),
-            "Settings: style " + settings.style + " · check every \(settings.refreshMinutes) min · " + (settings.usDates ? "US" : "European") + " dates",
-            "",
-            "Tools:"] + tools + ["", "Accounts:"] + accounts + ["", "Activity (past 3 days):", Diagnostics.contents()]).joined(separator: "\n")
+        let hidden = path.contains("/AppTranslocation/") ? " (hidden copy: move to Applications)" : ""
+        let login = SMAppService.mainApp.status == .enabled ? "on" : "off"
+        let updates = settings.autoUpdates ? "on" : "off"
+        let dates = settings.usDates ? "US" : "European"
+        var lines: [String] = []
+        lines.append("Live AI Usage Widget diagnostic report · \(Diagnostics.stamp(Date()))")
+        lines.append("No account names, emails, passwords or sign-in codes are included.")
+        lines.append("")
+        lines.append("App: version \(Self.version) · macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
+        lines.append("Running from: \(Diagnostics.clean(path))\(hidden)")
+        lines.append("Open at login: \(login) · automatic updates: \(updates)")
+        lines.append("Settings: style \(settings.style) · check every \(settings.refreshMinutes) min · \(dates) dates")
+        lines.append("")
+        lines.append("Tools:")
+        lines += tools
+        lines.append("")
+        lines.append("Accounts:")
+        lines += accounts
+        lines.append("")
+        lines.append("Activity (past 3 days):")
+        lines.append(Diagnostics.contents())
+        return lines.joined(separator: "\n")
     }
     /// Asks where to save the report (the Desktop by default) and writes it there.
     func saveDiagnosticReport() {
@@ -222,7 +235,8 @@ import UniformTypeIdentifiers
             do { try process.run(); process.waitUntilExit(); return process.terminationStatus == 0 } catch { return false }
         }.value
         working[provider] = nil
-        Diagnostics.log(toolName(provider) + ": install " + (ok ? "finished" : "failed") + (installed(provider) ? ", found at " + ((try? UsageReader.find(provider)) ?? "") : ", not found"))
+        let place = (try? UsageReader.find(provider)).map { ", found at " + $0 } ?? ", not found"
+        Diagnostics.log("\(toolName(provider)): install \(ok ? "finished" : "failed")\(place)")
         message = ok ? "" : "Couldn't install " + toolName(provider) + ". Check your internet connection and try again."
         objectWillChange.send()
     }
@@ -299,8 +313,9 @@ import UniformTypeIdentifiers
                 status = try StatusStore.publishUsage(input: payload)
                 let summary = settings.enabled.map { provider -> String in
                     let usage = status?.usage?[provider]
-                    let result = usage?.refresh?.status == .failed ? "failed (" + (usage?.refresh?.failureReason?.rawValue ?? "unknown") + ")" : "ok"
-                    return toolName(provider) + " " + result + " · " + (usage?.windows.map(\.window).joined(separator: ", ") ?? "no readings")
+                    let result = usage?.refresh?.status == .failed ? "failed (\(usage?.refresh?.failureReason?.rawValue ?? "unknown"))" : "ok"
+                    let readings = usage?.windows.map(\.window).joined(separator: ", ") ?? "no readings"
+                    return "\(toolName(provider)) \(result) · \(readings)"
                 }.joined(separator: " | ")
                 // Only changes are written, so a quiet day adds a line or two, not hundreds.
                 if summary != lastSummary { Diagnostics.log("Check: " + summary); lastSummary = summary }
@@ -713,8 +728,9 @@ struct WidgetLinks: ViewModifier {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         signal(SIGPIPE, SIG_IGN)
-        Diagnostics.startLaunch("version " + UsageModel.version + " · macOS " + ProcessInfo.processInfo.operatingSystemVersionString
-            + " · running from " + Bundle.main.bundlePath + (Bundle.main.bundlePath.contains("/AppTranslocation/") ? " (hidden copy)" : ""))
+        let path = Bundle.main.bundlePath
+        let hidden = path.contains("/AppTranslocation/") ? " (hidden copy)" : ""
+        Diagnostics.startLaunch("version \(UsageModel.version) · macOS \(ProcessInfo.processInfo.operatingSystemVersionString) · running from \(path)\(hidden)")
         guard Mover.shouldOffer() else { return }
         DispatchQueue.main.async {
             NSApp.activate(ignoringOtherApps: true)

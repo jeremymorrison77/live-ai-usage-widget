@@ -47,7 +47,7 @@ import Darwin
         let reset = formatter.string(from: date.addingTimeInterval(3600))
         // Diagnostics: nothing personal, and only the past three days are kept.
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let cleaned = Diagnostics.clean("signed in as someone@example.com at " + home + "/x via https://claude.ai/oauth?code=abc token sk-ant-0123456789abcdef0123456789abcdef")
+        let cleaned = Diagnostics.clean("signed in as someone@example.com at " + home + "/x via https://claude.ai/oauth?code=abc token q0123456789abcdef0123456789abcdef")
         precondition(!cleaned.contains("@example.com") && !cleaned.contains(home) && !cleaned.contains("https://") && !cleaned.contains("0123456789abcdef0123"), cleaned)
         let logNow = Date()
         let log = Diagnostics.marker + Diagnostics.stamp(logNow.addingTimeInterval(-5 * 86400)) + " · old launch\n"
