@@ -224,6 +224,8 @@ struct WidgetStatus: Codable {
         }.max { ($0.refresh.lastFailureAt ?? $0.refresh.lastAttemptAt ?? .distantPast) <
             ($1.refresh.lastFailureAt ?? $1.refresh.lastAttemptAt ?? .distantPast) }
     }
+    /// The limits each account usually reports, shown as placeholders until its first reading arrives.
+    static func expectedWindows(_ provider: String) -> [String] { provider == "claude" ? ["5-hour", "weekly all", "weekly Fable"] : ["5-hour", "weekly"] }
     /// The one name used for each account everywhere.
     static func name(_ provider: String) -> String { provider == "claude" ? "Claude Code" : "ChatGPT Codex" }
     static func updateDateLabel(_ date: Date?, calendar: Calendar = .current) -> String {

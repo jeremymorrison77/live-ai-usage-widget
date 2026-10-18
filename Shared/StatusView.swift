@@ -26,13 +26,19 @@ struct TrendsStatusView: View {
     let large: Bool
     let settings: WidgetSettings
 
+    /// Every connected account shows at once; one without a reading yet shows empty "Loading…" rows.
     private var agents: [String] {
-        ["claude", "codex"].filter { settings.enabled.contains($0) && !(status?.usage?[$0]?.windows.isEmpty ?? true) }
+        ["claude", "codex"].filter { settings.enabled.contains($0) }
+    }
+    private func loading(_ agent: String) -> Bool { status?.usage?[agent]?.windows.isEmpty ?? true }
+    private func windows(_ agent: String) -> [UsageWindow] {
+        guard loading(agent) else { return status?.usage?[agent]?.windows ?? [] }
+        return WidgetStatus.expectedWindows(agent).map { UsageWindow(window: $0, usedPercent: 100, resetsAt: nil) }
     }
     private func shown(_ agent: String) -> [UsageWindow] {
-        let windows = status?.usage?[agent]?.windows ?? []
+        let windows = windows(agent)
         if !compact { return windows }
-        let all = agents.flatMap { a in (status?.usage?[a]?.windows ?? []).map { (a, $0) } }
+        let all = agents.flatMap { a in self.windows(a).map { (a, $0) } }
             .filter { !settings.hiddenSmallMetrics.contains(UsageHistory.key($0.0, $0.1.window)) }
             .prefix(5)
         return all.filter { $0.0 == agent }.map { $0.1 }
@@ -44,7 +50,7 @@ struct TrendsStatusView: View {
         VStack(alignment: .leading, spacing: compact ? 2 : 4) {
             if count == 0 {
                 Spacer(minLength: 0)
-                Text("Waiting for readings").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("Connect an account in Settings").font(.system(size: 11)).foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             } else if !compact && !large {
                 HStack(alignment: .top, spacing: 16) {
@@ -66,10 +72,11 @@ struct TrendsStatusView: View {
 
     @ViewBuilder private func rows(_ agent: String) -> some View {
         ForEach(shown(agent), id: \.window) { window in
-            let stale = status?.usage?[agent]?.isStale(at: date) == true || (window.resetsAt.map { $0 <= date } ?? false)
+            let waiting = loading(agent)
+            let stale = waiting || status?.usage?[agent]?.isStale(at: date) == true || (window.resetsAt.map { $0 <= date } ?? false)
             let history = status?.usageHistory?[UsageHistory.key(agent, window.window)] ?? []
             let activity = UsageHistory.activity(history, at: date)
-            let color = settings.color(for: window.leftPercent)
+            let color = waiting ? Color.secondary : settings.color(for: window.leftPercent)
             HStack(spacing: compact ? 5 : 8) {
                 if settings.style == "solar" {
                     ZStack {
@@ -84,7 +91,7 @@ struct TrendsStatusView: View {
                     Text(WidgetStatus.name(agent) + " · " + shortName(window.window))
                         .foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.85)
                     Spacer(minLength: 1)
-                    Text("\(Int(window.leftPercent.rounded()))%")
+                    Text(waiting ? "…" : "\(Int(window.leftPercent.rounded()))%")
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
                 }.font(.system(size: large ? 13 : compact ? 10 : 11))
                 if settings.style == "trends" {
@@ -99,7 +106,7 @@ struct TrendsStatusView: View {
                     }.frame(height: large ? 5 : 3).padding(.top, 2)
                 }
                 if large || !compact || roomy {
-                    Text(stale ? "Old reading" : window.resetText(at: date) ?? "")
+                    Text(waiting ? (status?.usage?[agent]?.refresh?.status == .failed ? "Couldn't load · see Settings" : "Loading…") : stale ? "Old reading" : window.resetText(at: date) ?? "")
                         .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.85)
                 }
             }

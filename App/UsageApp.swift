@@ -510,7 +510,7 @@ struct SettingsView: View {
     }
     private var metricChoices: [String] {
         model.settings.enabled.flatMap { provider in
-            let names = model.status?.usage?[provider]?.windows.map(\.window) ?? (provider == "claude" ? ["5-hour", "weekly all", "weekly Fable"] : ["5-hour", "weekly"])
+            let names = model.status?.usage?[provider]?.windows.map(\.window) ?? WidgetStatus.expectedWindows(provider)
             return names.map { UsageHistory.key(provider, $0) }
         }
     }
