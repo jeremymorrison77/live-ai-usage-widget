@@ -34,7 +34,7 @@ def main():
         contents[name] = data
     destination = ROOT / 'dist'
     destination.mkdir(exist_ok=True)
-    archive = destination / 'live-ai-usage-widget-1.1.4-source.zip'
+    archive = destination / 'live-ai-usage-widget-1.1.5-source.zip'
     with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as output:
         for name, data in sorted(contents.items()):
             info = zipfile.ZipInfo('live-ai-usage-widget/' + name, date_time=(2026, 1, 1, 0, 0, 0))

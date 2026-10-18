@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.5
 
 If Claude Code or Codex is not in one of the usual places, the app asks the person's own Terminal setup where it is (so fnm, asdf, mise, pnpm and custom npm folders are found), and it checks again right before installing so it never adds a second copy.
 
