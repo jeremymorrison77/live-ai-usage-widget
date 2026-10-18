@@ -305,22 +305,24 @@ struct AccountRow: View {
         let installed = model.installed(provider)
         let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
         let busy = model.working[provider] ?? (model.connecting.contains(provider) ? "Connecting…" : nil)
-        // One line only: anything extra goes between the install state and the button.
+        let link = busy != nil ? model.signInLink[provider] : nil
+        // Why the last check failed, shown as the button itself.
+        let problem = busy == nil && installed && !connected && model.settings.enabled.contains(provider) ? model.status?.usage?[provider]?.refresh?.failureReason : nil
+        // One line only: every state, including problems and the sign-in link, is the button.
         HStack {
                 Text(name)
                 Spacer()
                 Text(installed ? "Installed" : "Not installed").foregroundStyle(.secondary)
-                if busy != nil, let link = model.signInLink[provider] {
-                    Link("Open sign-in page", destination: link).font(.caption)
-                } else if busy == nil && model.settings.enabled.contains(provider) && !connected, let reason = model.status?.usage?[provider]?.refresh?.failureReason {
-                    Text("· " + reason.actionLabel(agent: name)).font(.caption).foregroundStyle(.orange).lineLimit(1)
-                }
                 Button {
-                    if !installed { model.install(provider) } else if connected { model.disconnect(provider) } else { model.connect(provider) }
+                    if let link { NSWorkspace.shared.open(link) }
+                    else if !installed { model.install(provider) }
+                    else if problem == .cliUpdateRequired { Task { await model.installNow(provider); model.connect(provider) } }
+                    else if connected { model.disconnect(provider) } else { model.connect(provider) }
                 } label: {
                     Group {
+                        if link != nil { Label("Open sign-in page", systemImage: "safari") }
                         // The spinner sits inside the button of the account that is working.
-                        if busy != nil {
+                        else if busy != nil {
                             HStack(spacing: 6) {
                                 ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 14, height: 14)
                                 Text(installed ? "Connecting…" : "Installing…")
@@ -329,11 +331,20 @@ struct AccountRow: View {
                         else if !installed { Text("Install " + model.toolName(provider)) }
                         else if connected && hovering { Label("Disconnect", systemImage: "xmark.circle").foregroundStyle(.red) }
                         else if connected { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
+                        else if let problem { Label(Self.title(problem, tool: model.toolName(provider)), systemImage: "exclamationmark.circle").foregroundStyle(.orange) }
                         else { Label("Connect", systemImage: "person.crop.circle") }
-                    }.frame(width: 140)
+                    }.frame(width: 150)
                 }
-                .disabled(busy != nil)
+                .disabled(busy != nil && link == nil)
                 .onHover { hovering = $0 }
+        }
+    }
+    private static func title(_ problem: UsageFailureReason, tool: String) -> String {
+        switch problem {
+        case .cliUpdateRequired: return "Update " + tool
+        case .signInRequired: return "Sign in"
+        case .interactiveSetupRequired: return "Finish setup"
+        default: return "Try again"
         }
     }
 }
