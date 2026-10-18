@@ -80,7 +80,8 @@ struct TrendsStatusView: View {
             // While a requested check runs everything sits at zero; the new reading then grows in and eases to a stop.
             let checking = status?.checking(at: date) == true
             let left = checking || waiting ? 0 : window.leftPercent
-            let grow = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 1.6)
+            // Widgets allow up to two seconds of animation; use all of it, slowing to a stop.
+            let grow = Animation.easeOut(duration: 2)
             HStack(spacing: compact ? 5 : 8) {
                 if settings.style == "solar" {
                     ZStack {
@@ -146,9 +147,10 @@ struct TrendsStatusView: View {
                 .lineLimit(1).minimumScaleFactor(0.8)
             Spacer(minLength: 2)
             if checking, let since = status?.checkingSince {
-                // Widgets can't run an endless spinner; this system circle keeps moving while the check runs.
-                ProgressView(timerInterval: since...since.addingTimeInterval(30), countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
-                    .progressViewStyle(.circular).tint(.secondary).frame(width: 11, height: 11).scaleEffect(0.5)
+                // Widgets can't run a spinner, so the arrow turns a step with each one-second entry, animated in between.
+                let angle = max(0, date.timeIntervalSince(since).rounded()) * 120
+                Image(systemName: "arrow.clockwise")
+                    .rotationEffect(.degrees(angle)).animation(.linear(duration: 1), value: angle)
                     .accessibilityLabel("Checking usage")
             } else {
                 Link(destination: URL(string: "live-ai-usage-widget://refresh")!) { Image(systemName: "arrow.clockwise") }

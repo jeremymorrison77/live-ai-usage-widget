@@ -16,8 +16,15 @@ struct Provider: TimelineProvider {
         let status = StatusStore.load()
         try? StatusStore.recordTimelineRead(status: status, at: now)
         // Future entries age the visible snapshot even if collection stops.
-        let entries = (Array(0...30) + Array(stride(from: 35, through: 180, by: 5))).map {
+        var entries = (Array(0...30) + Array(stride(from: 35, through: 180, by: 5))).map {
             StatusEntry(date: now.addingTimeInterval(Double($0) * 60), status: status)
+        }
+        // While a requested check runs, one entry a second turns the refresh arrow (for at most two minutes).
+        if let since = status?.checkingSince, status?.checking(at: now) == true {
+            let start = max(now, since).timeIntervalSince(since).rounded(.up)
+            let ticks = stride(from: start, to: 120, by: 1).map { StatusEntry(date: since.addingTimeInterval($0), status: status) }
+            entries = ticks + entries.filter { $0.date >= since.addingTimeInterval(120) }
+            entries.insert(StatusEntry(date: now, status: status), at: 0)
         }
         completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(300))))
     }
