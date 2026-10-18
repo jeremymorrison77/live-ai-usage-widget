@@ -81,12 +81,12 @@ struct TrendsStatusView: View {
                 }
                 VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 3) {
-                    Text((agent == "claude" ? "Claude" : "ChatGPT") + " · " + shortName(window.window))
+                    Text(WidgetStatus.name(agent) + " · " + shortName(window.window))
                         .foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.85)
                     Spacer(minLength: 1)
                     Text("\(Int(window.leftPercent.rounded()))%")
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
-                }.font(.system(size: large ? 13 : 11))
+                }.font(.system(size: large ? 13 : compact ? 10 : 11))
                 if settings.style == "trends" {
                     UsageSparkline(activity: activity, date: date, color: color)
                         .frame(height: large ? 18 : roomy ? 14 : 8)

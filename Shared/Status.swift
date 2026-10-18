@@ -94,7 +94,7 @@ enum UsageFailureReason: String, Codable {
 
     func actionLabel(agent: String) -> String {
         switch self {
-        case .cliUpdateRequired: return "Update \(agent) command-line tool"
+        case .cliUpdateRequired: return "Update \(agent)"
         case .signInRequired: return "Sign in to \(agent)"
         case .interactiveSetupRequired: return "Open \(agent) to finish setup"
         case .rateLimited: return "Rate limited · will retry"
@@ -220,10 +220,12 @@ struct WidgetStatus: Codable {
     var usageFailure: (agent: String, refresh: UsageRefresh)? {
         ["claude", "codex"].compactMap { key -> (agent: String, refresh: UsageRefresh)? in
             guard let refresh = usage?[key]?.refresh, refresh.status == .failed else { return nil }
-            return (key == "claude" ? "Claude" : "Codex", refresh)
+            return (Self.name(key), refresh)
         }.max { ($0.refresh.lastFailureAt ?? $0.refresh.lastAttemptAt ?? .distantPast) <
             ($1.refresh.lastFailureAt ?? $1.refresh.lastAttemptAt ?? .distantPast) }
     }
+    /// The one name used for each account everywhere.
+    static func name(_ provider: String) -> String { provider == "claude" ? "Claude Code" : "ChatGPT Codex" }
     static func updateDateLabel(_ date: Date?, calendar: Calendar = .current) -> String {
         guard let date else { return "time unknown" }
         let formatter = DateFormatter()
@@ -239,7 +241,7 @@ struct WidgetStatus: Codable {
     }
     func usageLastSuccessText(compact: Bool = false, calendar: Calendar = .current) -> String? {
         guard let failure = usageFailure else { return nil }
-        let candidates = [failure.refresh.lastSuccessAt, usage?[failure.agent.lowercased()]?.observedAt].compactMap { $0 }
+        let candidates = [failure.refresh.lastSuccessAt, usage?[failure.agent == Self.name("claude") ? "claude" : "codex"]?.observedAt].compactMap { $0 }
         guard !candidates.isEmpty else { return compact ? "No successful update yet" : "Last successful update: none yet" }
         let lastSuccess = candidates.filter { $0 <= Date().addingTimeInterval(30) }.max()
         return (compact ? "Last OK " : "Last successful update ") + Self.updateDateLabel(lastSuccess, calendar: calendar)

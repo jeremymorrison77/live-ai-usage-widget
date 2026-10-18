@@ -42,7 +42,8 @@ import Combine
         } catch { message = "Couldn't save settings. Check the color percentages, or reinstall the app." }
     }
     func installed(_ provider: String) -> Bool { (try? UsageReader.find(provider)) != nil }
-    func toolName(_ provider: String) -> String { provider == "claude" ? "Claude Code" : "Codex" }
+    /// The one name used for each account everywhere: menus, buttons, settings, widget and docs.
+    func toolName(_ provider: String) -> String { WidgetStatus.name(provider) }
     /// Turns an account on and does whatever is missing: install, browser sign-in, then a fresh reading.
     func connect(_ provider: String) {
         connecting.insert(provider)
@@ -117,7 +118,7 @@ import Combine
     func install(_ provider: String) { Task { await installNow(provider) } }
     func installNow(_ provider: String) async {
         let claude = provider == "claude"
-        working[provider] = claude ? "Installing Claude Code…" : "Installing Codex…"
+        working[provider] = "Installing…"
         // Claude's official installer, or OpenAI's signed Codex release for Apple Silicon, run in the background.
         let command = claude ? "curl -fsSL https://claude.ai/install.sh | bash"
             : "set -e; d=$(mktemp -d); curl -fsSL https://github.com/openai/codex/releases/latest/download/codex-aarch64-apple-darwin.tar.gz -o \"$d/codex.tgz\"; tar -xzf \"$d/codex.tgz\" -C \"$d\"; mkdir -p \"$HOME/.local/bin\"; mv \"$d/codex-aarch64-apple-darwin\" \"$HOME/.local/bin/codex\"; chmod 755 \"$HOME/.local/bin/codex\"; rm -rf \"$d\""
@@ -192,7 +193,7 @@ import Combine
             }
             guard settings.generation == self.settings.generation else { refreshAgain = true; return }
             connecting.subtract(settings.enabled)
-            guard let payload else { message = "Couldn't check usage. Make sure the Claude or ChatGPT command-line tool is installed and signed in."; return }
+            guard let payload else { message = "Couldn't check usage. Make sure Claude Code or ChatGPT Codex is installed and signed in."; return }
             do {
                 status = try StatusStore.publishUsage(input: payload)
                 WidgetCenter.shared.reloadAllTimelines()
@@ -227,7 +228,7 @@ import Combine
                 .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         }
         .handlesExternalEvents(matching: ["*"])
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
         .commands { CommandGroup(replacing: .appSettings) { SettingsCommand() } }
         // Menu bar icon instead of a Dock icon. Its label stays alive, so it also opens the window on request.
         MenuBarExtra {
@@ -249,17 +250,17 @@ struct MenuContent: View {
     var body: some View {
         // One line per account in the settings window's words. Every line has an icon so all text lines up.
         ForEach(["claude", "codex"], id: \.self) { provider in
-            let name = provider == "claude" ? "Claude" : "ChatGPT"
+            let name = WidgetStatus.name(provider)
             let installed = model.installed(provider)
             let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
             if let busy = model.working[provider] ?? (model.connecting.contains(provider) ? "Connecting…" : nil) {
                 Button { open() } label: { Label(name + " · " + busy, systemImage: "hourglass") }
             } else if !installed {
-                Button { model.install(provider) } label: { Label(name + " · Not installed · Install " + model.toolName(provider), systemImage: "arrow.down.circle") }
+                Button { model.install(provider) } label: { Label(name + " · Install", systemImage: "arrow.down.circle") }
             } else if connected {
-                Button { open() } label: { Label { Text(name + " · Installed · Connected") } icon: { Image(nsImage: MenuIcon.check) } }
+                Button { open() } label: { Label { Text(name + " · Connected") } icon: { Image(nsImage: MenuIcon.check) } }
             } else {
-                Button { open(); model.connect(provider) } label: { Label(name + " · Installed · Connect", systemImage: "person.crop.circle") }
+                Button { open(); model.connect(provider) } label: { Label(name + " · Connect", systemImage: "person.crop.circle") }
             }
         }
         Divider()
@@ -301,18 +302,17 @@ struct AccountRow: View {
     let provider: String
     @State private var hovering = false
     var body: some View {
-        let name = provider == "claude" ? "Claude" : "ChatGPT"
+        let name = WidgetStatus.name(provider)
         let installed = model.installed(provider)
         let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
         let busy = model.working[provider] ?? (model.connecting.contains(provider) ? "Connecting…" : nil)
         let link = busy != nil ? model.signInLink[provider] : nil
         // Why the last check failed, shown as the button itself.
         let problem = busy == nil && installed && !connected && model.settings.enabled.contains(provider) ? model.status?.usage?[provider]?.refresh?.failureReason : nil
-        // One line only: every state, including problems and the sign-in link, is the button.
+        // One line only: every state, including install, problems and the sign-in link, is the button.
         HStack {
                 Text(name)
                 Spacer()
-                Text(installed ? "Installed" : "Not installed").foregroundStyle(.secondary)
                 Button {
                     if let link { NSWorkspace.shared.open(link) }
                     else if !installed { model.install(provider) }
@@ -328,20 +328,21 @@ struct AccountRow: View {
                                 Text(installed ? "Connecting…" : "Installing…")
                             }
                         }
-                        else if !installed { Text("Install " + model.toolName(provider)) }
+                        else if !installed { Label("Install", systemImage: "arrow.down.circle") }
                         else if connected && hovering { Label("Disconnect", systemImage: "xmark.circle").foregroundStyle(.red) }
                         else if connected { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
-                        else if let problem { Label(Self.title(problem, tool: model.toolName(provider)), systemImage: "exclamationmark.circle").foregroundStyle(.orange) }
+                        else if let problem { Label(Self.title(problem), systemImage: "exclamationmark.circle").foregroundStyle(.orange) }
                         else { Label("Connect", systemImage: "person.crop.circle") }
+                    // Wide enough for the longest state, "Open sign-in page" with its icon.
                     }.frame(width: 150)
                 }
                 .disabled(busy != nil && link == nil)
                 .onHover { hovering = $0 }
         }
     }
-    private static func title(_ problem: UsageFailureReason, tool: String) -> String {
+    private static func title(_ problem: UsageFailureReason) -> String {
         switch problem {
-        case .cliUpdateRequired: return "Update " + tool
+        case .cliUpdateRequired: return "Update"
         case .signInRequired: return "Sign in"
         case .interactiveSetupRequired: return "Finish setup"
         default: return "Try again"
@@ -462,14 +463,19 @@ struct SettingsView: View {
                     if setupDone {
                         Button { showSetupHelp.toggle() } label: { Text(showSetupHelp ? "Hide setup help" : "Setup help").frame(width: 130) }
                     }
-                    Button { model.save(); model.refresh() } label: { Text("Save settings").frame(width: 130) }
+                    Button {
+                        // Finish any number still being typed, then save it with everything else.
+                        NSApp.keyWindow?.makeFirstResponder(nil)
+                        DispatchQueue.main.async { model.save(); model.refresh() }
+                    } label: { Text("Save settings").frame(width: 130) }
                         .keyboardShortcut(.defaultAction)
                 }
                 // The line keeps its space when empty so messages never move the window's contents.
                 Text(model.message.isEmpty ? " " : model.message).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }.padding(.vertical, 14).frame(maxWidth: .infinity).background(.bar)
             }
-            .frame(width: 520, height: 640)
+            .frame(minWidth: 480, idealWidth: 520, minHeight: 420, idealHeight: 640)
+            .background(WindowSizeMemory(name: "Settings"))
             .onAppear {
                 NSApp.activate(ignoringOtherApps: true); checkWidgets()
                 // Nothing is selected when the window opens, not even the first percentage field.
@@ -509,7 +515,7 @@ struct SettingsView: View {
         }
     }
     private func metricTitle(_ key: String) -> String {
-        key.replacingOccurrences(of: "claude:", with: "Claude · ").replacingOccurrences(of: "codex:", with: "ChatGPT · ")
+        key.replacingOccurrences(of: "claude:", with: WidgetStatus.name("claude") + " · ").replacingOccurrences(of: "codex:", with: WidgetStatus.name("codex") + " · ")
     }
     private func colorPicker(_ hex: Binding<String>) -> some View {
         ColorPicker("Color", selection: Binding(get: { WidgetSettings.color(hex: hex.wrappedValue) }, set: { color in
@@ -559,6 +565,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         URLRouter.shared.settings = true
         return true
+    }
+}
+
+/// Remembers the settings window's size and position between openings and launches.
+struct WindowSizeMemory: NSViewRepresentable {
+    let name: String
+    func makeNSView(context: Context) -> NSView { Tracker(name: name) }
+    func updateNSView(_ view: NSView, context: Context) {}
+    final class Tracker: NSView {
+        let name: String
+        init(name: String) { self.name = name; super.init(frame: .zero) }
+        required init?(coder: NSCoder) { nil }
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let window, window.frameAutosaveName != name else { return }
+            // Restore after SwiftUI's own first layout, then keep saving every change.
+            DispatchQueue.main.async { [name] in
+                window.setFrameUsingName(name)
+                window.setFrameAutosaveName(name)
+            }
+        }
     }
 }
 

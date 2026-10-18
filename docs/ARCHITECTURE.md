@@ -2,9 +2,9 @@
 
 The native companion owns collection. Its timer checks once per minute while running; the native Swift collector gates each provider independently to five minutes after success and fifteen minutes after failure. It uses a nonblocking file lock and atomic state replacement. A clock rollback cannot postpone retries indefinitely. The app requests WidgetKit reload after publication; timeline entries also age existing values without requiring a new reading.
 
-Claude is read through its own `/usage` terminal panel in a bounded disposable working directory. It disables tools and hooks for the probe. The parser requires valid percentages and explicit reset timezones and accepts optional per-model weekly limits. Terminal output must settle before accepting it. UI changes, new CLI prompts or unsupported date formats can break parsing; failure is preferable to guessed data.
+Claude Code is read through its own `/usage` terminal panel in a bounded disposable working directory. It disables tools and hooks for the probe. The parser requires valid percentages and explicit reset timezones and accepts optional per-model weekly limits. Terminal output must settle before accepting it. UI changes, new CLI prompts or unsupported date formats can break parsing; failure is preferable to guessed data.
 
-Codex uses the official tool's stdio app-server interface: initialize, initialized, account/rateLimits/read. It never starts a conversation or turn. It selects the Codex bucket and rejects malformed limits. Both readers cap output and time out; they terminate only their own spawned helper process groups, never programs selected by name.
+ChatGPT Codex uses the official tool's stdio app-server interface: initialize, initialized, account/rateLimits/read. It never starts a conversation or turn. It selects the Codex bucket and rejects malformed limits. Both readers cap output and time out; they terminate only their own spawned helper process groups, never programs selected by name.
 
 Provider authentication renewal belongs to the provider's official CLI. This app does not copy, refresh or manipulate tokens. It retries after errors; revoked sessions, MFA, policy changes and expired authorization may still require the user to sign in. Do not promise permanent authentication or consider cached data proof of renewal.
 

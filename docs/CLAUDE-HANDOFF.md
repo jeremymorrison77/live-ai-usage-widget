@@ -27,5 +27,7 @@ Built, signed (not notarized) and installed on the owner's Mac for testing; comm
 - First launch auto-detects installed, signed-in tools and connects them (`autoDetected` setting). Open at login is a General toggle, on by default. Get started has two steps (connect accounts, add widget). Window title: Live AI Usage Widget Settings.
 - Menu bar: one line per account with an icon (green check when connected), then Settings, Check now, Quit, all with icons so text aligns. No disconnect in the menu.
 - Fixed: `claude auth status` output in a terminal uses cursor codes; it is now stripped before reading `loggedIn`.
-- Owner reported "a few issues" still to discuss. Builds use `CFBundleVersion` 20; bump the version, notarize and release only when the owner says.
+- 10/18/2026 fixes from owner testing: spinner inside the working account's button; steady Connecting… until the reading arrives; disconnecting one account keeps the other; no extra lines under account rows (problems and the sign-in link are button states; no Installed text); quiet background checks with a fixed message line; nothing focused on open; resizable settings window that remembers its size; typed numbers kept on Save. One name per account everywhere: Claude Code and ChatGPT Codex (`WidgetStatus.name`). Small widget rows use 10 pt so the full names fit.
+- README picture `docs/images/overview.png` still shows the old window and names; redraw it before the next release.
+- Owner may still have more issues to discuss. Builds use `CFBundleVersion` 20; bump the version, notarize and release only when the owner says.
 

@@ -9,7 +9,7 @@ Version 1.0.1. A signed, notarized Apple Silicon ZIP is prepared. Notarization e
 - [x] Clean, Solar and Trends, small/medium/large layouts, account selection and small-widget metric selection.
 - [x] Reader protocol/parser, timeout, privacy filtering, retry/backoff, failure retention and history tests.
 - [x] Signed companion and WidgetKit extension, hardened runtime, matching app groups.
-- [x] Host app-group read/write self-check; real Claude and Codex readings on both test Macs. The second Mac's desktop displayed both providers.
+- [x] Host app-group read/write self-check; real Claude Code and ChatGPT Codex readings on both test Macs. The second Mac's desktop displayed both providers.
 - [x] Settings gear opens Settings; account indicators and linked percent inputs checked in the running app.
 - [x] Apple notarization Accepted, ticket stapled, signature verification and Gatekeeper acceptance.
 - [x] Versioned app ZIP and SHA-256 checksum; installation/update/uninstall instructions.
@@ -19,7 +19,7 @@ Version 1.0.1. A signed, notarized Apple Silicon ZIP is prepared. Notarization e
 - [x] Review the exact allowlisted source and app artifacts before upload.
 - [x] Create the repository (live-ai-usage-widget, public since 10/17/2026), run its CI and enable private vulnerability reporting. Never publish a containing private project or its history.
 - [x] Confirm desktop widget gallery registration and actual timeline rendering on a separate Mac (small widget, 10/17/2026). Medium/large actual desktop placement still needs review.
-- [ ] Test a downloaded archive on a separate Apple Silicon Mac or fresh macOS user: Claude alone, ChatGPT alone, both and neither; missing tools and first-run sign-in.
+- [ ] Test a downloaded archive on a separate Apple Silicon Mac or fresh macOS user: Claude Code alone, ChatGPT Codex alone, both and neither; missing tools and first-run sign-in.
 - [ ] Verify US/EU dates, all styles/sizes, color controls, macOS full-color/tinted appearance and accessibility in installed widgets.
 - [ ] Test login-item enable/disable, reboot, sleep/wake, app relaunch, account switching and uninstall.
 - [ ] Observe natural credential renewal with fresh source timestamps, revoked authorization and network recovery. Existing-account success is not proof of renewal.

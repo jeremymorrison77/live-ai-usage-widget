@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Each account is one line: Claude Code or ChatGPT Codex and a single button that says what it will do (Install, Connect, Connecting…, Connected, or Sign in, Update, Finish setup, Try again, Open sign-in page). The spinner shows inside the button of the account that is working. Disconnecting one account no longer drops the other. Accounts are named Claude Code and ChatGPT Codex everywhere. The menu bar shows one line per account. First launch connects tools that are already signed in, and Open at login is on by default. The settings window can be resized and remembers its size, opens with nothing selected, and no longer shifts while checking in the background. A number typed into a field is kept when Save settings is clicked.
+
 ## 1.0.1
 
 Connecting no longer needs Terminal. The Connect window shows three steps and can be closed with Cancel or Escape. Install shows a green check when Claude Code or Codex is already on the Mac; otherwise it installs the official tool in the background. Sign in opens the browser for both Claude and ChatGPT and checks the connection when done. Check connection answers Claude Code's one-time folder-trust question for the app's own empty folder. Removed the extra note under Check every.

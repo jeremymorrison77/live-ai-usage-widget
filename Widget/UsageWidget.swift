@@ -41,7 +41,7 @@ struct UsageWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: StatusStore.kind, provider: Provider()) { WidgetView(entry: $0) }
             .configurationDisplayName("Live AI Usage Widget")
-            .description("Claude and ChatGPT usage remaining.")
+            .description("Claude Code and ChatGPT Codex usage remaining.")
             .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
