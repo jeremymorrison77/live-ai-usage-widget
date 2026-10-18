@@ -305,11 +305,16 @@ struct AccountRow: View {
         let installed = model.installed(provider)
         let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
         let busy = model.working[provider] ?? (model.connecting.contains(provider) ? "Connecting…" : nil)
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
+        // One line only: anything extra goes between the install state and the button.
+        HStack {
                 Text(name)
                 Spacer()
                 Text(installed ? "Installed" : "Not installed").foregroundStyle(.secondary)
+                if busy != nil, let link = model.signInLink[provider] {
+                    Link("Open sign-in page", destination: link).font(.caption)
+                } else if busy == nil && model.settings.enabled.contains(provider) && !connected, let reason = model.status?.usage?[provider]?.refresh?.failureReason {
+                    Text("· " + reason.actionLabel(agent: name)).font(.caption).foregroundStyle(.orange).lineLimit(1)
+                }
                 Button {
                     if !installed { model.install(provider) } else if connected { model.disconnect(provider) } else { model.connect(provider) }
                 } label: {
@@ -329,13 +334,6 @@ struct AccountRow: View {
                 }
                 .disabled(busy != nil)
                 .onHover { hovering = $0 }
-            }
-            // The button says what is happening; only a sign-in link the browser missed gets its own line.
-            if busy != nil {
-                if let link = model.signInLink[provider] { Link("Open sign-in page", destination: link).font(.caption) }
-            } else if model.settings.enabled.contains(provider) && !connected, let reason = model.status?.usage?[provider]?.refresh?.failureReason {
-                Text(reason.actionLabel(agent: name)).font(.caption).foregroundStyle(.orange)
-            }
         }
     }
 }
