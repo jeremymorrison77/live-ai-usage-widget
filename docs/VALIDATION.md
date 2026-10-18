@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.6 (build 27) — 10/18/2026
+
+Owner confirmed refresh works after the stale widget helper was stopped; launch showed no Settings window on screen. Notarization Accepted (submission 41b0b099-fc8c-4739-b852-d349c158a504; app ZIP SHA-256 ef0a13c1dd3eac1729e8d36785c2e587616a079ae13a5dc9495ace96d87d4278). The reopen-after-update path is first exercised by the next update.
+
 ## 1.1.5 (build 26) — 10/18/2026
 
 Terminal lookup fallback (tested: finds /bin/ls through the login shell) and install guard. Notarization Accepted (submission 21baea47-ce46-4d51-81ae-3a801fccd65e; app ZIP SHA-256 9a999e47baf4bbf1b6a0cc3c894a9a61abeb8d7c2ce3844575444c1d33dbd89d).
