@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.1.6
 
-After a one-click update the widget's background helper is restarted, so the widget runs the new version straight away (before, it could keep running the old one until the Mac restarted).
+Refresh starts sooner. Settings no longer flashes when the app starts (at login or after an update), and it reopens after an update if it was open. After a one-click update the widget's background helper is restarted, so the widget runs the new version straight away (before, it could keep running the old one until the Mac restarted).
 
 ## 1.1.5
 
