@@ -585,8 +585,9 @@ struct SettingsView: View {
                 HStack {
                     Text("Check every")
                     Spacer()
-                    TextField("Minutes", value: Binding(get: { model.settings.refreshMinutes }, set: { model.settings.refreshMinutes = min(1440, max(1, $0)) }), format: .number)
-                        .labelsHidden().textFieldStyle(.roundedBorder).frame(width: 56).multilineTextAlignment(.center)
+                    NumberField(value: Double(model.settings.refreshMinutes), suffix: "", width: 56) {
+                        model.settings.refreshMinutes = Int(min(1440, max(1, $0)))
+                    }
                     Stepper("", value: $model.settings.refreshMinutes, in: 1...1440).labelsHidden()
                     Text(model.settings.refreshMinutes == 1 ? "minute" : "minutes")
                 }
@@ -642,7 +643,15 @@ struct SettingsView: View {
             .onAppear {
                 NSApp.activate(ignoringOtherApps: true); checkWidgets()
                 // Nothing is selected when the window opens, not even the first percentage field.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { NSApp.windows.filter(\.isVisible).forEach { $0.makeFirstResponder(nil) } }
+                // macOS puts the cursor in the first text box and scrolls down to it; undo both so the window opens at the top.
+                for delay in [0.05, 0.25, 0.6] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        for window in NSApp.windows where window.isVisible {
+                            window.makeFirstResponder(nil)
+                            if let content = window.contentView { Self.scrollToTop(content) }
+                        }
+                    }
+                }
                 // Open at login starts on; after the first launch it follows the user's choice.
                 if !model.settings.autoDetected && SMAppService.mainApp.status != .enabled {
                     try? SMAppService.mainApp.register(); launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -668,6 +677,16 @@ struct SettingsView: View {
                     HStack { Spacer(); Button("Done") { showWidgetHelp = false; checkWidgets() }.keyboardShortcut(.defaultAction) }
                 }.padding(24).frame(width: 400)
             }
+    }
+    /// Scrolls the settings list (the window's tallest scroll area) back to its top.
+    static func scrollToTop(_ view: NSView) {
+        func scrollAreas(_ view: NSView) -> [NSScrollView] { ((view as? NSScrollView).map { [$0] } ?? []) + view.subviews.flatMap(scrollAreas) }
+        guard let area = scrollAreas(view).max(by: { ($0.documentView?.bounds.height ?? 0) < ($1.documentView?.bounds.height ?? 0) }),
+              let document = area.documentView else { return }
+        let clip = area.contentView
+        let top = document.isFlipped ? -area.contentInsets.top : document.bounds.height - clip.bounds.height + area.contentInsets.top
+        clip.setBoundsOrigin(NSPoint(x: clip.bounds.origin.x, y: top))
+        area.reflectScrolledClipView(clip)
     }
     private func percentField(_ value: Double, set: @escaping (Double) -> Void) -> some View {
         PercentField(value: value, commit: set)
@@ -784,16 +803,38 @@ struct WindowSizeMemory: NSViewRepresentable {
 struct PercentField: View {
     let value: Double
     let commit: (Double) -> Void
+    var body: some View { NumberField(value: value, suffix: "%", width: 42, commit: commit) }
+}
+
+/// A number box that never takes the cursor by itself: it shows the value, and becomes editable only when clicked.
+/// (macOS otherwise puts the cursor in the first box when the window opens and scrolls down to it.)
+struct NumberField: View {
+    let value: Double
+    let suffix: String
+    let width: CGFloat
+    let commit: (Double) -> Void
     @State private var text = ""
+    @State private var editing = false
     @FocusState private var focused: Bool
+    private var shown: String { "\(Int(value))" + suffix }
     private func finish() {
         if let number = Double(text.replacingOccurrences(of: "%", with: "").trimmingCharacters(in: .whitespaces)), number.isFinite { commit(number.rounded()) }
-        text = "\(Int(value))%"
+        editing = false
     }
     var body: some View {
-        TextField("%", text: $text).labelsHidden().textFieldStyle(.roundedBorder).frame(width: 42).multilineTextAlignment(.center).focused($focused)
-            .onAppear { text = "\(Int(value))%" }.onSubmit { finish() }
-            .onChange(of: focused) { _, active in if !active { finish() } }
-            .onChange(of: value) { _, new in if !focused { text = "\(Int(new))%" } }
+        if editing {
+            TextField(suffix, text: $text).labelsHidden().textFieldStyle(.roundedBorder).frame(width: width).multilineTextAlignment(.center)
+                .focused($focused)
+                .onAppear { text = shown; DispatchQueue.main.async { focused = true } }
+                .onSubmit { finish() }
+                .onChange(of: focused) { _, active in if !active { finish() } }
+        } else {
+            Text(shown).frame(width: width - 6, height: 18).padding(.horizontal, 3).padding(.vertical, 2)
+                .background(RoundedRectangle(cornerRadius: 5).fill(Color(nsColor: .textBackgroundColor)))
+                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.primary.opacity(0.15)))
+                .contentShape(Rectangle())
+                .onTapGesture { editing = true }
+                .accessibilityAddTraits(.isButton)
+        }
     }
 }
