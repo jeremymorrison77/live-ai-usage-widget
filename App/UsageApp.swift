@@ -381,7 +381,7 @@ import UniformTypeIdentifiers
                 if summary != lastSummary { Diagnostics.log("Check: " + summary); lastSummary = summary }
                 // macOS limits how often a background app may redraw widgets; spend that only on real changes.
                 if !force && Self.changed(before, status) { WidgetCenter.shared.reloadAllTimelines() }
-                message = status?.usageFailureText() ?? ""
+                message = status?.usageFailureText() ?? status?.pausedText() ?? ""
             } catch { message = "Couldn't save the readings. Try reinstalling the app." }
         }
     }

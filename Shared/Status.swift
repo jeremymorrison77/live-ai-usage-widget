@@ -261,6 +261,24 @@ struct WidgetStatus: Codable {
         guard let failure = usageFailure else { return nil }
         return "Failed last update " + Self.updateDateLabel(failure.refresh.lastFailureAt ?? failure.refresh.lastAttemptAt, calendar: calendar)
     }
+    /// When an account has asked the app to wait (checked too often), the time the app will try it again.
+    /// The wait is the app's own (15 minutes, or the check interval if longer); Anthropic doesn't publish one.
+    func pausedUntil(at now: Date = Date()) -> Date? {
+        let wait = max(900, Double(WidgetSettings.load().refreshMinutes) * 60)
+        return ["claude", "codex"].compactMap { key -> Date? in
+            guard let refresh = usage?[key]?.refresh, refresh.status == .failed, refresh.failureReason == .rateLimited,
+                  let failed = refresh.lastFailureAt, failed.addingTimeInterval(wait) > now else { return nil }
+            return failed.addingTimeInterval(wait)
+        }.max()
+    }
+    /// Settings' wording for the same pause.
+    func pausedText(at now: Date = Date()) -> String? {
+        guard let retry = pausedUntil(at: now) else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        formatter.dateFormat = WidgetSettings.load().usDates ? "h:mm a" : "HH:mm"
+        return "Too many refreshes. Waiting until " + formatter.string(from: retry) + " to try again."
+    }
     func usageLastSuccessText(compact: Bool = false, calendar: Calendar = .current) -> String? {
         guard let failure = usageFailure else { return nil }
         let candidates = [failure.refresh.lastSuccessAt, usage?[failure.agent == Self.name("claude") ? "claude" : "codex"]?.observedAt].compactMap { $0 }

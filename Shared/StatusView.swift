@@ -144,8 +144,16 @@ struct UsageStatusView: View {
             if failed { Image(systemName: "exclamationmark.triangle.fill") }
             // Only a real failed check says "Failed"; otherwise the time of the last reading, with the warning sign when it is old.
             let checking = status?.emptied(at: date) == true
+            if !checking, status?.usageFailureText() == nil, let retry = status?.pausedUntil(at: date) {
+                // A live countdown to the automatic retry.
+                (Text(compact ? "Too many. Waiting " : "Too many refreshes. Waiting ")
+                    + Text(timerInterval: date...max(date, retry), countsDown: true).monospacedDigit()
+                    + Text(compact ? "" : " to try again."))
+                    .lineLimit(1).minimumScaleFactor(0.8)
+            } else {
             Text(checking ? "Checking…" : status?.usageFailureText() ?? (compact ? "" : "Last refresh ") + WidgetStatus.updateDateLabel(status?.usageObservedAt))
                 .lineLimit(1).minimumScaleFactor(0.8)
+            }
             Spacer(minLength: 2)
             if checking {
                 // Widgets can't run a spinner, so a centered arc turns a step with each one-second entry, animated in between.
