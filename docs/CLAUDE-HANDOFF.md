@@ -5,7 +5,7 @@ Current version: **1.0.1 (build 14), Apple Silicon, macOS 14+**, published as a 
 ## Current state
 
 - Name: Live AI Usage Widget. Bundle identifier `com.liveaiusagewidget.app`, widget `com.liveaiusagewidget.app.widget`, app group `TEAMID.com.liveaiusagewidget.app`, link scheme `live-ai-usage-widget://`.
-- The app is a menu bar app (no Dock icon) with Settings, Check now and Quit. It opens one setup window (Get started steps, hidden once all are done with a Setup help link to show them, accounts, appearance, updates interval, small-widget readings; Setup help and Save settings centered at the bottom). There is no separate preview window. Connecting needs no Terminal: background install, browser sign-in, and automatic trust of the app's own probe folder. Clean is the default style.
+- The app is a menu bar app (no Dock icon) with Settings, Check now and Quit. It opens one setup window (Setup help steps, hidden once all are done with a Setup help link to show them, accounts, appearance, updates interval, small-widget readings; Setup help and Save settings centered at the bottom). There is no separate preview window. Connecting needs no Terminal: background install, browser sign-in, and automatic trust of the app's own probe folder. Clean is the default style.
 - Tests, compile-only build, source export and CI pass. 1.0.1 is notarized (submission `8da8a2bc-259e-4e85-8d49-c1059463c571`), app ZIP SHA-256 `05d8853e4fc1a605d9c6931434a731af71d48b350873a2460287f5b0594a1d36`.
 - README pictures in `docs/images/` are drawn offscreen from the app's real views with sample data, then stripped of metadata. `scripts/package.py` refuses PNGs that carry metadata.
 

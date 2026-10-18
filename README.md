@@ -14,13 +14,13 @@ Pictures are drawn from the app's own views with made-up sample readings, not a 
 
 1. Click **Download for Mac** above, or open the [latest release](../../releases/latest) and under Assets click "Download for Mac (Apple Silicon)". The checksum files are optional.
 2. Double-click the ZIP to unzip it and drag **Live AI Usage Widget** into Applications.
-3. Open it. The setup window appears; follow its three Get started steps.
+3. Open it. The setup window appears; follow its Setup help steps.
 
 The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): one line per account (Claude Code, ChatGPT Codex), then Settings, Check now and Quit. To update later, quit it from that menu, replace it in Applications and reopen it; your settings are kept.
 
 ## Setup and settings
 
-**Get started** (hides itself once both are done; the Setup help button brings it back)
+**Setup help** (hides itself once both steps are done; the Setup help button brings it back)
 1. Connect Claude Code, ChatGPT Codex or both.
 2. Add the widget to your desktop: right-click an empty spot on the desktop, choose Edit Widgets, search for Live AI Usage Widget, pick a size and drag it on. macOS doesn't let apps place widgets themselves. Show me how walks through it, and the step turns green once a widget is placed.
 **General.** Open at login, on by default.

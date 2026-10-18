@@ -363,7 +363,7 @@ struct SettingsView: View {
     @State private var showSetupHelp = false
     @Environment(\.dismissWindow) private var dismissWindow
     private static var launchHandled = false
-    // Get started hides itself once every step is done; Setup help brings it back.
+    // Setup help hides itself once every step is done; Setup help brings it back.
     private var setupDone: Bool { anyConnected && (widgetsPlaced ?? 0) > 0 }
     private var anyConnected: Bool {
         model.settings.enabled.contains { model.status?.usage?[$0]?.refresh?.status == .ok && model.status?.usage?[$0]?.isStale(at: Date()) == false }
@@ -403,7 +403,7 @@ struct SettingsView: View {
                     if (widgetsPlaced ?? 0) > 0 { Text("On desktop").foregroundStyle(.secondary) }
                     else { Button("Show me how") { showWidgetHelp = true } }
                 }
-            } header: { Text("Get started") }
+            } header: { Text("Setup help") }
             }
             Section("General") {
                 Toggle("Open at login", isOn: $launchAtLogin).onChange(of: launchAtLogin) { _, on in
