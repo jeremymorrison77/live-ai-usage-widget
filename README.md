@@ -2,13 +2,13 @@
 
 A macOS desktop widget that shows how much of your Claude Code and ChatGPT Codex usage limits are left. Small, medium and large widgets come in Clean (default) and Solar styles. Accounts and data stay on your own Mac.
 
-**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.1.7-macOS-arm64.zip)** · version 1.1.7 · macOS 14 or later · M1 or newer
+**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.1.8-macOS-arm64.zip)** · version 1.1.8 · macOS 14 or later · M1 or newer
 
 <p align="center"><img src="docs/images/overview.png" alt="Settings window and the widget in all sizes and styles" width="100%"></p>
 
 Pictures are drawn from the app's own views with made-up sample readings, not a real account.
 
-**Version 1.1.7.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
+**Version 1.1.8.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
 
 ## Download and install
 
