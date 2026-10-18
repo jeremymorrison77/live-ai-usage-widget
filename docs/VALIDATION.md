@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.3 (build 24) — 10/18/2026
+
+Settings opens at the top with no cursor in any box (checked in a drawn window at the default 520 × 640 size). Notarization Accepted (submission 5d3ae6bc-aba9-4c82-a323-f93a1546d17f; app ZIP SHA-256 c495ac7733efaa0f809d4dd41ec6f64b96842e812866b2ff82174562e91ebedb).
+
 ## 1.1.2 (build 23) — 10/18/2026
 
 Troubleshooting report and 3-day activity log. Tests cover cleaning of personal details and the 3-day trim; the installed build wrote the expected launch, check and update lines on the development Mac. Notarization Accepted (submission 4edc3bd6-395d-4a6b-b96e-0112f1e21bf0; app ZIP SHA-256 8c0e92508d036b0337085acc4703fe4793d27714a1baa49b11057e63934d8191).
