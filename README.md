@@ -1,6 +1,6 @@
 # Live AI Usage Widget
 
-A macOS desktop widget that shows how much of your Claude Code and ChatGPT Codex usage limits are left. Small, medium and large widgets come in Clean (default), Solar and Trends styles. Accounts and data stay on your own Mac.
+A macOS desktop widget that shows how much of your Claude Code and ChatGPT Codex usage limits are left. Small, medium and large widgets come in Clean (default) and Solar styles. Accounts and data stay on your own Mac.
 
 **[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.1.3-macOS-arm64.zip)** · version 1.1.3 · macOS 14 or later · M1 or newer
 
@@ -28,7 +28,7 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 
 **Accounts.** One line each for Claude Code and ChatGPT Codex, with one button that always says what it will do: Install, Connect, Connected (hover to Disconnect), or Sign in, Update, Finish setup or Try again when something needs attention. No Terminal needed. On first launch, tools that are already installed and signed in connect on their own. Disconnect only hides that account; the tool stays signed in.
 
-**Appearance.** Style: Clean (default), Solar or Trends. Date format: US or European. Usage colors on or off, with three color bands you can recolor and re-threshold (30% or more remaining, 11–29%, 10% or less by default).
+**Appearance.** Style: Clean (default) or Solar. Date format: US or European. Usage colors on or off, with three color bands you can recolor and re-threshold (30% or more remaining, 11–29%, 10% or less by default).
 
 **Updates.** Check every N minutes: 5 by default, any value from 1 to 1,440. After a failed check the app waits at least 15 minutes before trying again. Check usage now in the menu bar, or the refresh button on the widget, checks immediately.
 
@@ -44,7 +44,6 @@ Changes apply as you make them; there is no Save button. You can close the windo
 
 - Remaining percentage for each limit your plan exposes: Claude Code's five-hour, weekly and any model-specific weekly windows; ChatGPT Codex five-hour and weekly. ChatGPT Codex here means Codex coding allowances, not other ChatGPT products or API billing.
 - When each limit resets, and when it was last updated. Readings fade as they age and failures show their date. A newly connected account appears right away with Loading… until its first reading arrives.
-- Trends style adds a six-hour history of how fast each limit is being used. Gaps are drawn flat; nothing is invented.
 
 ## Requirements
 

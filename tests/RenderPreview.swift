@@ -13,7 +13,7 @@ import SwiftUI
         let status = WidgetStatus(usage: usage)
         var settings = WidgetSettings()
         settings.enabled = ["claude", "codex"]
-        for style in ["clean", "solar", "trends"] {
+        for style in ["clean", "solar"] {
         settings.style = style
         for (name, small, large) in [("small", true, false), ("medium", false, false), ("large", false, true)] {
             let view = StatusView(status: status, date: now, compact: small, large: large, settings: settings)

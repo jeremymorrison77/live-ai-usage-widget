@@ -17,7 +17,7 @@ import SwiftUI
                       UsageWindow(window: "weekly Fable", usedPercent: 41, resetsAt: now.addingTimeInterval(74 * hour))]
         let codex = [UsageWindow(window: "5-hour", usedPercent: 18, resetsAt: now.addingTimeInterval(3.4 * hour)),
                      UsageWindow(window: "weekly", usedPercent: 92, resetsAt: now.addingTimeInterval(118 * hour))]
-        // Six hours of steady sample use with a few busy spells, so Trends has a line to draw.
+        // Six hours of sample history, as the app keeps.
         var history: [String: [UsageObservation]] = [:]
         for (agent, windows) in [("claude", claude), ("codex", codex)] {
             for window in windows {
@@ -61,7 +61,7 @@ import SwiftUI
         model.timer?.invalidate()
         model.settings = settings
         model.status = status
-        let settingsHeight: CGFloat = 1400
+        let settingsHeight: CGFloat = 1330
         let host = NSHostingView(rootView: SettingsView(model: model).frame(width: 520, height: settingsHeight))
         host.frame = NSRect(x: 0, y: 0, width: 520, height: settingsHeight)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -76,15 +76,11 @@ import SwiftUI
             VStack(alignment: .leading, spacing: 30) {
                 labeled("Clean · small", widget("clean", "small"))
                 labeled("Clean · large", widget("clean", "large"))
-                HStack(alignment: .top, spacing: 20) {
-                    labeled("Solar · small", widget("solar", "small"))
-                    labeled("Trends · small", widget("trends", "small"))
-                }
+                labeled("Solar · small", widget("solar", "small"))
             }.frame(width: 360, alignment: .leading)
             VStack(alignment: .leading, spacing: 30) {
                 labeled("Clean · medium", widget("clean", "medium"))
                 labeled("Solar · medium", widget("solar", "medium"))
-                labeled("Trends · medium", widget("trends", "medium"))
                 labeled("Solar · large", widget("solar", "large"))
             }
             labeled("Settings", Image(nsImage: settingsImage).resizable().frame(width: 520 * 0.8, height: settingsHeight * 0.8).clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))

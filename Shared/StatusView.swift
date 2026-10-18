@@ -13,14 +13,13 @@ struct StatusView: View {
     var settings = WidgetSettings.load()
 
     var body: some View {
-        TrendsStatusView(status: status, date: date, compact: compact, large: large, settings: settings)
+        UsageStatusView(status: status, date: date, compact: compact, large: large, settings: settings)
     }
 
 }
 
 /// A single native renderer shared by every widget family and the companion.
-/// Sparklines encode observed consumption rate, while numbers remain allowance left.
-struct TrendsStatusView: View {
+struct UsageStatusView: View {
     let status: WidgetStatus?
     let date: Date
     let compact: Bool
@@ -75,8 +74,6 @@ struct TrendsStatusView: View {
         ForEach(shown(agent), id: \.window) { window in
             let waiting = loading(agent)
             let stale = waiting || status?.usage?[agent]?.isStale(at: date) == true || (window.resetsAt.map { $0 <= date } ?? false)
-            let history = status?.usageHistory?[UsageHistory.key(agent, window.window)] ?? []
-            let activity = UsageHistory.activity(history, at: date)
             let color = waiting ? Color.secondary : settings.color(for: window.leftPercent)
             // While a requested check runs everything sits at zero; the new reading then grows in and eases to a stop.
             // A check the user asked for: the old reading fades away in place, then the new one grows in from zero.
@@ -107,13 +104,7 @@ struct TrendsStatusView: View {
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
                         .contentTransition(.numericText(value: left)).animation(grow ?? fade, value: left)
                 }.font(.system(size: large ? 13 : compact ? 10 : 11))
-                if settings.style == "trends" {
-                    UsageSparkline(activity: activity, date: date, color: color)
-                        .frame(height: large ? 18 : roomy ? 14 : 8)
-                        .scaleEffect(x: 1, y: phase == .empty ? 0.02 : 1, anchor: .bottom)
-                        .animation(grow, value: phase)
-                        .opacity(visible).animation(fade, value: visible)
-                } else if settings.style == "clean" {
+                if settings.style == "clean" {
                     GeometryReader { geometry in
                         // The fill is one full-width piece that slides in from the left, so it grows rather than fades.
                         ZStack(alignment: .leading) {
@@ -188,88 +179,6 @@ struct RefreshButton: View {
     /// Set by the widget so the shared view can use its intent without the app knowing about it.
     nonisolated(unsafe) static var intent: (any AppIntent)?
 }
-
-struct UsageSparkline: View {
-    let activity: [UsageActivity]
-    let date: Date
-    let color: Color
-    @State private var hovered: UsageActivity?
-    @State private var hovering = false
-
-    var body: some View {
-        GeometryReader { geometry in
-            let start = date.addingTimeInterval(-UsageHistory.span)
-            let ceiling = max(activity.map(\.perMinute).max() ?? 0, 0.01)
-            ZStack {
-                // Join missing intervals to the measured trace, rather than drawing a second line underneath it.
-                // Vertical connectors mark entry/exit from unknown coverage, not measured usage spikes.
-                Path { path in
-                    let baseline = max(1, geometry.size.height - 1)
-                    var previous: UsageActivity?
-                    var lastPoint = CGPoint(x: 0, y: baseline)
-                    for item in activity {
-                        let fromX = max(0, item.start.timeIntervalSince(start) / UsageHistory.span * geometry.size.width)
-                        let x = item.end.timeIntervalSince(start) / UsageHistory.span * geometry.size.width
-                        let y = (1 - item.perMinute / ceiling) * max(0, geometry.size.height - 2) + 1
-                        if previous == nil || abs(item.start.timeIntervalSince(previous!.end)) >= 1 {
-                            path.move(to: lastPoint)
-                            path.addLine(to: CGPoint(x: lastPoint.x, y: baseline))
-                            path.addLine(to: CGPoint(x: fromX, y: baseline))
-                            path.addLine(to: CGPoint(x: fromX, y: y))
-                        }
-                        lastPoint = CGPoint(x: x, y: y)
-                        previous = item
-                    }
-                    path.move(to: lastPoint)
-                    path.addLine(to: CGPoint(x: lastPoint.x, y: baseline))
-                    path.addLine(to: CGPoint(x: geometry.size.width, y: baseline))
-                }.stroke(color, style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round))
-                .widgetAccentable()
-                Path { path in
-                var previous: UsageActivity?
-                for item in activity {
-                    let x = item.end.timeIntervalSince(start) / UsageHistory.span * geometry.size.width
-                    let y = (1 - item.perMinute / ceiling) * max(0, geometry.size.height - 2) + 1
-                    let point = CGPoint(x: x, y: y)
-                    if let previous, abs(item.start.timeIntervalSince(previous.end)) < 1 {
-                        path.addLine(to: point)
-                    } else {
-                        // This first interval itself is measured; give even a solitary interval a visible line.
-                        let fromX = max(0, item.start.timeIntervalSince(start) / UsageHistory.span * geometry.size.width)
-                        path.move(to: CGPoint(x: fromX, y: y))
-                        path.addLine(to: point)
-                    }
-                    previous = item
-                }
-                }.stroke(color, style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round))
-                .widgetAccentable()
-            }
-                .contentShape(Rectangle())
-                .onContinuousHover { phase in
-                    switch phase {
-                    case .active(let location):
-                        hovering = true
-                        let time = start.addingTimeInterval(location.x / max(1, geometry.size.width) * UsageHistory.span)
-                        hovered = activity.first { $0.start <= time && time <= $0.end }
-                    case .ended: hovered = nil; hovering = false
-                    }
-                }
-        }
-        .help(detail)
-        .accessibilityLabel(detail)
-    }
-
-    private var detail: String {
-        guard let point = hovering ? hovered : activity.last else {
-            return "No recorded data. The flat line is a placeholder, not measured zero usage."
-        }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return "Past 6 hours · usage rate · scale per row. " + formatter.string(from: point.start) + "–" +
-            formatter.string(from: point.end) + String(format: ": %.2f percentage points used, %.3f per minute average. Missing intervals use a flat placeholder, not measured zero usage.", point.percentagePoints, point.perMinute)
-    }
-}
-
 
 struct WidgetPaper: View {
     var style: String

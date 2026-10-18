@@ -30,7 +30,8 @@ struct WidgetSettings: Codable, Equatable {
         middleColor = try c.decodeIfPresent(String.self, forKey: .middleColor) ?? "#E99A38"
         lowColor = try c.decodeIfPresent(String.self, forKey: .lowColor) ?? "#D65B64"
         style = try c.decodeIfPresent(String.self, forKey: .style) ?? "clean"
-        if !["clean", "solar", "trends"].contains(style) { style = "clean" }
+        // Trends was removed in 1.1.4; anyone who chose it gets Clean.
+        if !["clean", "solar"].contains(style) { style = "clean" }
         hiddenSmallMetrics = try c.decodeIfPresent([String].self, forKey: .hiddenSmallMetrics) ?? []
         refreshMinutes = min(1440, max(1, try c.decodeIfPresent(Int.self, forKey: .refreshMinutes) ?? 5))
         autoDetected = try c.decodeIfPresent(Bool.self, forKey: .autoDetected) ?? false

@@ -6,7 +6,7 @@ Version 1.1.3. A signed, notarized Apple Silicon ZIP is prepared. Notarization e
 
 - [x] Product name Live AI Usage Widget; MIT license included.
 - [x] Native Swift collector; no runtime Python dependency or bundled provider binaries.
-- [x] Clean, Solar and Trends, small/medium/large layouts, account selection and small-widget metric selection.
+- [x] Clean and Solar, small/medium/large layouts, account selection and small-widget metric selection.
 - [x] Reader protocol/parser, timeout, privacy filtering, retry/backoff, failure retention and history tests.
 - [x] Signed companion and WidgetKit extension, hardened runtime, matching app groups.
 - [x] Host app-group read/write self-check; real Claude Code and ChatGPT Codex readings on both test Macs. The second Mac's desktop displayed both providers.

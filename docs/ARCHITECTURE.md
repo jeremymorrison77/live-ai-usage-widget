@@ -10,7 +10,7 @@ Provider authentication renewal belongs to the provider's official CLI. This app
 
 The shared Swift store validates incoming numbers and timestamps, keeps newer observations and refresh outcomes, uses file locking and atomic writes, and caps history per metric. Switching providers in Settings generates a cache generation; results from an earlier generation cannot publish into the new selection. It clears graph history to avoid linking different accounts. Changing accounts externally without this workflow remains an acceptance limitation.
 
-Trends show average percentage points consumed per minute between genuine observations. At least two readings with the same reset identity are needed. Resets, corrections, long gaps and missing reset identity never create measured activity. Missing coverage is drawn flat; vertical connectors at its boundaries are coverage transitions, not observed spikes. Scales are per row. A daily or weekly allowance percentage is not a token count or dollar estimate.
+A bounded six-hour history of observations is still recorded (the Trends style that drew it was removed in 1.1.4).
 
 No private assistant integration, recording service, conversation-history fallback, external skill, personal workspace, developer identity or existing account state is required. The app group is supplied at build time. Development packaging does not install, activate or change an existing application.
 

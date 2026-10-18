@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Settings apply as you change them; the Save settings button is gone. The widget no longer shows "Failed to load" when its numbers are only old: the app now redraws the widget only when readings change (macOS was ignoring once-a-minute redraws), and old readings show their time with a warning sign. The widget's refresh button checks usage without opening Settings. The menu item is now "Check usage now" and always runs, even if a regular check is under way.
+The Trends style is gone; there are two styles, Clean and Solar (anyone on Trends moves to Clean). Settings apply as you change them; the Save settings button is gone. The widget no longer shows "Failed to load" when its numbers are only old: the app now redraws the widget only when readings change (macOS was ignoring once-a-minute redraws), and old readings show their time with a warning sign. The widget's refresh button checks usage without opening Settings. The menu item is now "Check usage now" and always runs, even if a regular check is under way.
 
 ## 1.1.3
 

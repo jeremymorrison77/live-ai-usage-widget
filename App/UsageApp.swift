@@ -615,7 +615,7 @@ struct SettingsView: View {
             }
             Section("Appearance") {
                 Picker("Style", selection: $model.settings.style) {
-                    Text("Clean").tag("clean"); Text("Solar").tag("solar"); Text("Trends").tag("trends")
+                    Text("Clean").tag("clean"); Text("Solar").tag("solar")
                 }
                 Picker("Date format", selection: $model.settings.usDates) { Text("European").tag(false); Text("US").tag(true) }
                 Toggle("Usage colors", isOn: $model.settings.usageColors)
