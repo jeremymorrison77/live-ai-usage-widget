@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.2 (build 23) — 10/18/2026
+
+Troubleshooting report and 3-day activity log. Tests cover cleaning of personal details and the 3-day trim; the installed build wrote the expected launch, check and update lines on the development Mac. Notarization Accepted (submission ea3116b4-37fa-4d8b-9e6d-bb9995dedfad; app ZIP SHA-256 d608f1f9b57c7199432755ec60833d428b19c11ccc43ea8f6f2c0153ac4508dd).
+
 ## 1.1.1 (build 22) — 10/18/2026
 
 Claude Code sign-in fix, update check and install, Move to Applications. Tests pass, including a fake sign-in that prints the paste-code line. Update download, checksum and notarization/team checks verified against the real 1.1.0 ZIP served locally; a tampered checksum was refused. Notarization Accepted (submission 21d2cbe7-d7ff-43b7-a7c3-ee02d7cfe3a9; app ZIP SHA-256 cd606e48a6eb8dd51b0bdc2cbd6d03f03b61504653750a7efaa0d6b586eecc50). The full one-click swap is first exercised when a later release ships; real Claude sign-in through the fixed flow not yet repeated.

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.2
 
 Troubleshooting in Settings: Save report… writes a plain-text report (versions, where the app runs from, tools found and signed in, last checks, and the past three days of activity) to send to the developer. The activity log stays on the Mac in ~/Library/Logs/Live AI Usage Widget, keeps three days and never grows past 256 KB, and leaves out account names, emails, passwords, sign-in codes and links.
 
