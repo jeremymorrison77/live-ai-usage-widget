@@ -237,7 +237,7 @@ struct MenuContent: View {
             let name = provider == "claude" ? "Claude" : "ChatGPT"
             let installed = model.installed(provider)
             let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
-            Text(name + " · " + (installed ? "Installed" : "Not installed"))
+            Button(name + " · " + (installed ? "Installed" : "Not installed")) { open() }
             if let busy = model.working[provider] { Text(busy) }
             else if !installed { Button("Install " + model.toolName(provider)) { model.install(provider) } }
             else if connected { Button { open() } label: { Label { Text("Connected") } icon: { Image(nsImage: MenuIcon.check) } } }
