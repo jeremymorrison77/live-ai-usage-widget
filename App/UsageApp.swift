@@ -4,6 +4,7 @@ import WidgetKit
 import ServiceManagement
 import Darwin
 import Combine
+import UniformTypeIdentifiers
 
 @MainActor final class UsageModel: ObservableObject {
     @Published var settings = WidgetSettings.load()
@@ -57,6 +58,7 @@ import Combine
         if manual { updateStatus = "Checking…" }
         Task {
             let latest = try? await Updater.latest()
+            Diagnostics.log("Update check: " + (latest.map { "latest " + $0.version } ?? "couldn't reach GitHub"))
             if let latest, Updater.isNewer(latest.version, than: Self.version) { update = latest; updateStatus = "" }
             else if manual { update = nil; updateStatus = latest == nil ? "Couldn't check. Try again later." : "Up to date" }
         }
@@ -65,14 +67,64 @@ import Combine
     func installUpdate() {
         guard let update else { return }
         updateStatus = "Downloading…"
+        Diagnostics.log("Update to " + update.version + " started")
         Task {
             do {
                 try await Updater.install(update)
                 NSApp.terminate(nil)
             } catch {
+                Diagnostics.log("Update failed: \(error)")
                 updateStatus = "Couldn't update. Opening the download page instead."
                 NSWorkspace.shared.open(URL(string: "https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest")!)
             }
+        }
+    }
+    /// A plain-text report of the app's state and recent activity, for the user to send if something goes wrong.
+    func diagnosticReport() async -> String {
+        let settings = self.settings, status = self.status
+        let tools: [String] = await Task.detached {
+            ["claude", "codex"].map { provider in
+                let name = WidgetStatus.name(provider)
+                guard let binary = try? UsageReader.find(provider) else { return name + ": not installed" }
+                let signed = UsageReader.signedIn(provider, directory: FileManager.default.temporaryDirectory)
+                return name + ": " + Diagnostics.clean(binary) + " · " + Diagnostics.toolVersion(binary) + " · signed in " + (signed.map { $0 ? "yes" : "no" } ?? "unknown")
+            }
+        }.value
+        let accounts = ["claude", "codex"].map { provider -> String in
+            let name = WidgetStatus.name(provider)
+            guard settings.enabled.contains(provider) else { return name + ": not connected" }
+            let usage = status?.usage?[provider]
+            let refresh = usage?.refresh
+            return name + ": " + (refresh?.status == .failed ? "last check failed (" + (refresh?.failureReason?.rawValue ?? "unknown") + ")" : "ok")
+                + " · readings " + (usage?.windows.map(\.window).joined(separator: ", ") ?? "none")
+                + " · last reading " + (usage?.observedAt.map(Diagnostics.stamp) ?? "never")
+                + " · last try " + (refresh?.lastAttemptAt.map(Diagnostics.stamp) ?? "never")
+        }
+        let path = Bundle.main.bundlePath
+        return ([
+            "Live AI Usage Widget diagnostic report · " + Diagnostics.stamp(Date()),
+            "No account names, emails, passwords or sign-in codes are included.",
+            "",
+            "App: version " + Self.version + " · macOS " + ProcessInfo.processInfo.operatingSystemVersionString,
+            "Running from: " + Diagnostics.clean(path) + (path.contains("/AppTranslocation/") ? " (hidden copy: move to Applications)" : ""),
+            "Open at login: " + (SMAppService.mainApp.status == .enabled ? "on" : "off") + " · automatic updates: " + (settings.autoUpdates ? "on" : "off"),
+            "Settings: style " + settings.style + " · check every \(settings.refreshMinutes) min · " + (settings.usDates ? "US" : "European") + " dates",
+            "",
+            "Tools:"] + tools + ["", "Accounts:"] + accounts + ["", "Activity (past 3 days):", Diagnostics.contents()]).joined(separator: "\n")
+    }
+    /// Asks where to save the report (the Desktop by default) and writes it there.
+    func saveDiagnosticReport() {
+        Task {
+            let report = await diagnosticReport()
+            let panel = NSSavePanel()
+            let day = DateFormatter(); day.dateFormat = "MM-dd-yyyy"
+            panel.nameFieldStringValue = "Live AI Usage Widget report " + day.string(from: Date()) + ".txt"
+            panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
+            panel.allowedContentTypes = [.plainText]
+            NSApp.activate(ignoringOtherApps: true)
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            do { try report.write(to: url, atomically: true, encoding: .utf8); NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            catch { message = "Couldn't save the report. Try another folder." }
         }
     }
     func installed(_ provider: String) -> Bool { (try? UsageReader.find(provider)) != nil }
@@ -80,6 +132,7 @@ import Combine
     func toolName(_ provider: String) -> String { WidgetStatus.name(provider) }
     /// Turns an account on and does whatever is missing: install, browser sign-in, then a fresh reading.
     func connect(_ provider: String) {
+        Diagnostics.log(toolName(provider) + ": Connect clicked")
         connecting.insert(provider)
         if !settings.enabled.contains(provider) {
             settings.enabled = ["claude", "codex"].filter { $0 == provider || settings.enabled.contains($0) }
@@ -97,11 +150,13 @@ import Combine
             let signed = await Task.detached { UsageReader.signedIn(provider, directory: probe) }.value
             working[provider] = nil
             signedIn[provider] = signed
+            Diagnostics.log(toolName(provider) + ": signed in " + (signed.map { $0 ? "yes" : "no" } ?? "unknown"))
             if signed == true { checkConnection([provider]) } else { signIn(provider) }
         }
     }
     /// Only stops showing this account; the official tool stays signed in.
     func disconnect(_ provider: String) {
+        Diagnostics.log(toolName(provider) + ": Disconnect clicked")
         settings.enabled.removeAll { $0 == provider }
         save()
         message = ""
@@ -122,6 +177,7 @@ import Combine
                 working[provider] = nil
             }
             connecting.subtract(["claude", "codex"].filter { !found.contains($0) })
+            Diagnostics.log("First launch: found signed in " + (found.isEmpty ? "none" : found.map(toolName).joined(separator: ", ")))
             guard !found.isEmpty else { return }
             settings.enabled = found
             checkConnection(found)
@@ -135,6 +191,7 @@ import Combine
     /// Accounts between a Connect click and the reading that follows it.
     @Published var connecting: Set<String> = []
     private var refreshAgain = false
+    private var lastSummary = ""
     @Published var signInLink: [String: URL] = [:]
     @Published var signedIn: [String: Bool] = [:]
     private var probe: URL {
@@ -153,6 +210,7 @@ import Combine
     func installNow(_ provider: String) async {
         let claude = provider == "claude"
         working[provider] = "Installing…"
+        Diagnostics.log(toolName(provider) + ": install started")
         // Claude's official installer, or OpenAI's signed Codex release for Apple Silicon, run in the background.
         let command = claude ? "curl -fsSL https://claude.ai/install.sh | bash"
             : "set -e; d=$(mktemp -d); curl -fsSL https://github.com/openai/codex/releases/latest/download/codex-aarch64-apple-darwin.tar.gz -o \"$d/codex.tgz\"; tar -xzf \"$d/codex.tgz\" -C \"$d\"; mkdir -p \"$HOME/.local/bin\"; mv \"$d/codex-aarch64-apple-darwin\" \"$HOME/.local/bin/codex\"; chmod 755 \"$HOME/.local/bin/codex\"; rm -rf \"$d\""
@@ -164,23 +222,29 @@ import Combine
             do { try process.run(); process.waitUntilExit(); return process.terminationStatus == 0 } catch { return false }
         }.value
         working[provider] = nil
+        Diagnostics.log(toolName(provider) + ": install " + (ok ? "finished" : "failed") + (installed(provider) ? ", found at " + ((try? UsageReader.find(provider)) ?? "") : ", not found"))
         message = ok ? "" : "Couldn't install " + toolName(provider) + ". Check your internet connection and try again."
         objectWillChange.send()
     }
     func signIn(_ provider: String) {
         working[provider] = "Finish signing in in your browser…"
         signInLink[provider] = nil
+        Diagnostics.log(toolName(provider) + ": browser sign-in started")
         let probe = self.probe
         Task {
             try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
             let failure: String? = await Task.detached {
                 do {
-                    try UsageReader.signIn(provider, directory: probe) { url in Task { @MainActor in self.signInLink[provider] = url } }
+                    try UsageReader.signIn(provider, directory: probe) { url in
+                        Diagnostics.log(WidgetStatus.name(provider) + ": sign-in page " + (url.host ?? "unknown"))
+                        Task { @MainActor in self.signInLink[provider] = url }
+                    }
                     return nil
                 } catch { return (error as? ReaderFailure)?.reason ?? "unavailable" }
             }.value
             working[provider] = nil
             signInLink[provider] = nil
+            Diagnostics.log(toolName(provider) + ": browser sign-in " + (failure.map { "failed (" + $0 + ")" } ?? "finished"))
             if failure != nil {
                 connecting.remove(provider)
                 message = failure == "usage_read_timed_out" ? "Sign-in timed out. Try again." : "Sign-in didn't finish. Try again."
@@ -199,7 +263,10 @@ import Combine
             if claude && (try? UsageReader.find("claude")) != nil {
                 working["claude"] = "Checking…"
                 try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
-                _ = await Task.detached { try? UsageReader.trustProbe(directory: probe) }.value
+                let trust: String = await Task.detached {
+                    do { try UsageReader.trustProbe(directory: probe); return "ok" } catch { return (error as? ReaderFailure)?.reason ?? "unavailable" }
+                }.value
+                Diagnostics.log("Claude Code: folder trust " + trust)
                 working["claude"] = nil
             }
             // An explicit check starts a new collection generation; timer retries keep their backoff.
@@ -227,9 +294,16 @@ import Combine
             }
             guard settings.generation == self.settings.generation else { refreshAgain = true; return }
             connecting.subtract(settings.enabled)
-            guard let payload else { message = "Couldn't check usage. Make sure Claude Code or ChatGPT Codex is installed and signed in."; return }
+            guard let payload else { Diagnostics.log("Check: couldn't run"); message = "Couldn't check usage. Make sure Claude Code or ChatGPT Codex is installed and signed in."; return }
             do {
                 status = try StatusStore.publishUsage(input: payload)
+                let summary = settings.enabled.map { provider -> String in
+                    let usage = status?.usage?[provider]
+                    let result = usage?.refresh?.status == .failed ? "failed (" + (usage?.refresh?.failureReason?.rawValue ?? "unknown") + ")" : "ok"
+                    return toolName(provider) + " " + result + " · " + (usage?.windows.map(\.window).joined(separator: ", ") ?? "no readings")
+                }.joined(separator: " | ")
+                // Only changes are written, so a quiet day adds a line or two, not hundreds.
+                if summary != lastSummary { Diagnostics.log("Check: " + summary); lastSummary = summary }
                 WidgetCenter.shared.reloadAllTimelines()
                 message = status?.usageFailureText() ?? ""
             } catch { message = "Couldn't save the readings. Try reinstalling the app." }
@@ -519,6 +593,17 @@ struct SettingsView: View {
                 Text("Up to five readings, in provider order. Medium and large show every available reading.").font(.caption).foregroundStyle(.secondary)
             }
             }
+            Section("Troubleshooting") {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Something not working?")
+                        Text("Save a report and send it to the developer. It has no account names, emails or passwords.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer()
+                    Button("Save report…") { model.saveDiagnosticReport() }
+                }
+            }
         }.formStyle(.grouped)
             .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 6) {
@@ -628,6 +713,8 @@ struct WidgetLinks: ViewModifier {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         signal(SIGPIPE, SIG_IGN)
+        Diagnostics.startLaunch("version " + UsageModel.version + " · macOS " + ProcessInfo.processInfo.operatingSystemVersionString
+            + " · running from " + Bundle.main.bundlePath + (Bundle.main.bundlePath.contains("/AppTranslocation/") ? " (hidden copy)" : ""))
         guard Mover.shouldOffer() else { return }
         DispatchQueue.main.async {
             NSApp.activate(ignoringOtherApps: true)
@@ -637,8 +724,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.addButton(withTitle: "Move to Applications")
             alert.addButton(withTitle: "Not Now")
             guard alert.runModal() == .alertFirstButtonReturn else { return }
-            do { _ = try Mover.moveToApplications(); NSApp.terminate(nil) }
+            do { _ = try Mover.moveToApplications(); Diagnostics.log("Moved to Applications"); NSApp.terminate(nil) }
             catch {
+                Diagnostics.log("Move to Applications failed: \(error)")
                 let failed = NSAlert()
                 failed.messageText = "Couldn't move the app"
                 failed.informativeText = "Quit it from the menu bar, drag Live AI Usage Widget into Applications in Finder, then open it from there."

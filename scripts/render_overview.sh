@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 mkdir -p build/overview
 sed 's/^@main struct UsageApp/struct UsageApp/' App/UsageApp.swift > build/overview/UsageApp.swift
 xcrun swiftc -parse-as-library -module-cache-path build/module-cache \
-  Shared/Status.swift Shared/Settings.swift Shared/StatusView.swift Helper/Reader.swift Helper/Collector.swift Helper/Updater.swift \
+  Shared/Status.swift Shared/Settings.swift Shared/StatusView.swift Helper/Reader.swift Helper/Collector.swift Helper/Updater.swift Helper/Diagnostics.swift \
   build/overview/UsageApp.swift tests/RenderOverview.swift -o build/overview/render
 version=$(sed -n "s/.*CFBundleShortVersionString='\([0-9.]*\)'.*/\1/p" scripts/build.py)
 build/overview/render build/overview/overview.png "$version"

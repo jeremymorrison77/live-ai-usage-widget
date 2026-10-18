@@ -45,8 +45,17 @@ import Darwin
         // A real PTY protocol using synthetic panel output, never the real provider.
         let date = Date(); let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.timeZone = TimeZone(secondsFromGMT: 0); formatter.dateFormat = "h:mma"
         let reset = formatter.string(from: date.addingTimeInterval(3600))
-        // Moving to Applications is offered only for hidden copies and Downloads or Desktop.
+        // Diagnostics: nothing personal, and only the past three days are kept.
         let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let cleaned = Diagnostics.clean("signed in as someone@example.com at " + home + "/x via https://claude.ai/oauth?code=abc token sk-ant-0123456789abcdef0123456789abcdef")
+        precondition(!cleaned.contains("@example.com") && !cleaned.contains(home) && !cleaned.contains("https://") && !cleaned.contains("0123456789abcdef0123"), cleaned)
+        let logNow = Date()
+        let log = Diagnostics.marker + Diagnostics.stamp(logNow.addingTimeInterval(-5 * 86400)) + " · old launch\n"
+            + Diagnostics.stamp(logNow.addingTimeInterval(-4 * 86400)) + "  old event\n"
+            + Diagnostics.stamp(logNow.addingTimeInterval(-3600)) + "  recent event\n"
+        let kept = Diagnostics.recent(log, now: logNow)
+        precondition(kept.contains("recent event") && !kept.contains("old event") && !kept.contains("old launch"), kept)
+        // Moving to Applications is offered only for hidden copies and Downloads or Desktop.
         precondition(Mover.shouldOffer(URL(fileURLWithPath: "/private/var/folders/x/T/AppTranslocation/ABC/d/Live AI Usage Widget.app")))
         precondition(Mover.shouldOffer(URL(fileURLWithPath: home + "/Downloads/Live AI Usage Widget.app")))
         precondition(!Mover.shouldOffer(URL(fileURLWithPath: "/Applications/Live AI Usage Widget.app")))

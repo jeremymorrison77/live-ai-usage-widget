@@ -61,7 +61,7 @@ import SwiftUI
         model.timer?.invalidate()
         model.settings = settings
         model.status = status
-        let settingsHeight: CGFloat = 1300
+        let settingsHeight: CGFloat = 1400
         let host = NSHostingView(rootView: SettingsView(model: model).frame(width: 520, height: settingsHeight))
         host.frame = NSRect(x: 0, y: 0, width: 520, height: settingsHeight)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)

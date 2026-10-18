@@ -32,6 +32,8 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 
 **Updates.** Check every N minutes: 5 by default, any value from 1 to 1,440. After a failed check the app waits at least 15 minutes before trying again. Check now in the menu bar checks immediately.
 
+**Troubleshooting.** Save report… writes a plain-text report you can send to the developer: app and tool versions, where the app runs from, whether each tool is signed in, recent checks and the past three days of activity. It never includes account names, emails, passwords or sign-in codes. The activity log lives in ~/Library/Logs/Live AI Usage Widget, keeps three days and stays under 256 KB; nothing is sent automatically.
+
 **Small widget readings.** Choose which readings the small widget shows (up to five). Medium and large show every reading. A limit your plan doesn't have stays listed, grayed out, as "Not included in your plan" (for example, ChatGPT Pro has no 5-hour limit, and only Claude Max and Premium seats have a weekly Fable limit).
 
 The settings window can be resized and remembers its size.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Troubleshooting in Settings: Save report… writes a plain-text report (versions, where the app runs from, tools found and signed in, last checks, and the past three days of activity) to send to the developer. The activity log stays on the Mac in ~/Library/Logs/Live AI Usage Widget, keeps three days and never grows past 256 KB, and leaves out account names, emails, passwords, sign-in codes and links.
+
 ## 1.1.1
 
 Fixed Claude Code browser sign-in (Authorize led to a "can't be reached" page). The app checks for updates and installs them in one click after checking they are Apple-approved and from the same developer. Opened from Downloads, it offers to move itself into Applications. Finds Claude Code installed with npm, nvm, Bun or Volta. Setup help names the widget up front.

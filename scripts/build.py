@@ -54,7 +54,7 @@ def main():
         if kind == 'APPL':
             command += [str(ROOT / 'Helper/Reader.swift'), str(ROOT / 'Helper/Collector.swift')]
         if kind == 'APPL':
-            command += [str(ROOT / 'Helper/Updater.swift')]
+            command += [str(ROOT / 'Helper/Updater.swift'), str(ROOT / 'Helper/Diagnostics.swift')]
         command += [str(ROOT / ('App/UsageApp.swift' if kind == 'APPL' else 'Widget/UsageWidget.swift')),
                     '-o', str(folder / 'Contents/MacOS' / executable)]
         subprocess.run(command, check=True)

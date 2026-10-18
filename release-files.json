@@ -5,6 +5,7 @@
   "CHANGELOG.md",
   "CONTRIBUTING.md",
   "Helper/Collector.swift",
+  "Helper/Diagnostics.swift",
   "Helper/Main.swift",
   "Helper/Reader.swift",
   "Helper/Updater.swift",
