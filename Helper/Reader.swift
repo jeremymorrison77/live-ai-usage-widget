@@ -322,6 +322,7 @@ enum UsageReader {
         let start = ProcessInfo.processInfo.systemUptime
         var lastOutput = start, data = Data(), sent = false, total = 0
         var dismissedAutoMode = false
+        var firstRun: Set<String> = []
         while ProcessInfo.processInfo.systemUptime - start < timeout {
             if let chunk = try child.readChunk() {
                 if chunk.isEmpty { throw ReaderFailure("unavailable") }
@@ -334,6 +335,7 @@ enum UsageReader {
             let text = try terminal(String(decoding: data, as: UTF8.self))
             if !matches("(?i)unknown option|unrecognized option", text).isEmpty { throw ReaderFailure("cli_update_required") }
             if !matches("(?i)Not logged in|Login expired|run /login", text).isEmpty { throw ReaderFailure("sign_in_required") }
+            if !sent, try answerFirstRun(text, child: child, answered: &firstRun) { data = Data(); continue }
             // Cancel only this optional opt-in. Never approve trust or permission prompts.
             if !sent && !dismissedAutoMode && text.contains("Permission Required: Make auto mode your default permission mode?") && text.contains("Escape to cancel:") {
                 try child.send(Data([27])); data = Data(); dismissedAutoMode = true
@@ -348,6 +350,7 @@ enum UsageReader {
                    let result = try? claudePanel(text, now: Date()) { return result }
             }
         }
+        reportStall("Usage check", (try? terminal(String(decoding: data, as: UTF8.self))) ?? "")
         throw ReaderFailure("usage_read_timed_out")
     }
 }
@@ -359,12 +362,34 @@ extension UsageReader {
         replace("\u{1b}\\[[0-9;?>=]*[a-zA-Z]", String(decoding: data, as: UTF8.self))
     }
 
+    /// Set by the app: told what Claude Code last showed when it stalls, for the diagnostic report.
+    nonisolated(unsafe) static var onStall: ((String) -> Void)?
+    static func reportStall(_ where_: String, _ text: String) {
+        let screen = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.suffix(4).joined(separator: " / ")
+        onStall?(where_ + " stalled; Claude Code showed: " + String(screen.suffix(240)))
+    }
+    /// Claude Code's one-time welcome screens on a fresh install (never opened in Terminal): keep the suggested text
+    /// style, continue past the safety notes, and decline the optional Terminal changes. Nothing else is answered.
+    static func answerFirstRun(_ text: String, child: ChildProcess, answered: inout Set<String>) throws -> Bool {
+        let screens: [(key: String, marker: String, answer: Data)] = [
+            ("style", "Choose the text style", Data("\r".utf8)),
+            ("notes", "Security notes", Data("\r".utf8)),
+            ("terminal", "Use Claude Code's terminal setup?", Data([27]))]
+        for screen in screens where !answered.contains(screen.key) && text.contains(screen.marker) {
+            try child.send(screen.answer)
+            answered.insert(screen.key)
+            return true
+        }
+        return false
+    }
+
     /// Answers Claude Code's one-time workspace question, and only for the app's own empty probe folder.
-    static func trustProbe(directory: URL, timeout: Double = 20) throws {
-        let child = try ChildProcess(binary: find("claude"), arguments: claudeArguments, directory: directory.path, terminal: true)
+    static func trustProbe(directory: URL, binary: String? = nil, timeout: Double = 45) throws {
+        let child = try ChildProcess(binary: binary ?? find("claude"), arguments: claudeArguments, directory: directory.path, terminal: true)
         defer { child.stop() }
         let start = uptime
         var data = Data(), answered = false
+        var firstRun: Set<String> = []
         while uptime - start < timeout {
             if let chunk = try child.readChunk() {
                 if chunk.isEmpty { throw ReaderFailure("unavailable") }
@@ -374,6 +399,7 @@ extension UsageReader {
             let text = plain(data)
             if !matches("(?i)unknown option|unrecognized option", text).isEmpty { throw ReaderFailure("cli_update_required") }
             if !matches("(?i)Not logged in|Login expired|run /login", text).isEmpty { throw ReaderFailure("sign_in_required") }
+            if try answerFirstRun(text, child: child, answered: &firstRun) { data = Data(); continue }
             if !answered && text.contains("Accessing workspace:") && text.contains("Enter y/n:") {
                 let flat = text.replacingOccurrences(of: "\r", with: "").replacingOccurrences(of: "\n", with: "")
                 guard flat.contains(directory.path) || flat.contains(directory.resolvingSymlinksInPath().path) else { throw ReaderFailure("interactive_setup_required") }
@@ -383,6 +409,7 @@ extension UsageReader {
             // Ready prompt means the folder is trusted (now or already).
             if uptime - start >= 2 && !matches("\\$\\s*$", text).isEmpty { return }
         }
+        reportStall("Folder trust", plain(data))
         throw ReaderFailure("usage_read_timed_out")
     }
 

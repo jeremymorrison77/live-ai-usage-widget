@@ -68,6 +68,10 @@ import Darwin
         let found = Updater.release(from: reply)
         precondition(found?.version == "1.1.1" && found?.app.lastPathComponent == "Live-AI-Usage-Widget-1.1.1-macOS-arm64.zip" && found?.checksum.pathExtension == "sha256")
         precondition(Updater.release(from: Data(#"{"tag_name":"v9","prerelease":true,"assets":[]}"#.utf8)) == nil)
+        // A fresh install shows welcome screens first: keep the text style, continue past the notes, decline Terminal changes.
+        let fresh = try script("stty -icanon -echo\nprintf 'Welcome to Claude Code\\nChoose the text style that looks best with your terminal\\n'\nk=$(dd bs=1 count=1 2>/dev/null | od -An -tu1 | tr -d ' ')\n[ \"$k\" = 13 ] || [ \"$k\" = 10 ] || exit 1\nprintf 'Security notes:\\nPress Enter to continue\\n'\nk=$(dd bs=1 count=1 2>/dev/null | od -An -tu1 | tr -d ' ')\n[ \"$k\" = 13 ] || [ \"$k\" = 10 ] || exit 1\nprintf \"Use Claude Code's terminal setup?\\n\"\nk=$(dd bs=1 count=1 2>/dev/null | od -An -tu1 | tr -d ' ')\n[ \"$k\" = 27 ] || exit 1\nstty icanon\nprintf '$ '\nread line\nprintf '\\nCurrent session\\n12%% used\\nResets \(reset) (UTC)\\n'\nsleep 10\n")
+        let afterWelcome = try UsageReader.claude(directory: directory, binary: fresh, timeout: 12)
+        precondition((afterWelcome["windows"] as? [[String: Any]])?.count == 1, "Fresh-install screens not handled")
         // Claude Code's sign-in offers "Paste code here if prompted" and must keep running until the browser finishes.
         let login = try script("printf 'Opening browser to sign in: https://claude.ai/oauth/authorize?x=1\\nPaste code here if prompted > '\nsleep 2\nprintf '\\nLogin successful.\\n'\n")
         var opened: URL?

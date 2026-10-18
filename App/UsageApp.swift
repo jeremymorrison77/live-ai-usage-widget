@@ -23,6 +23,7 @@ import UniformTypeIdentifiers
         }
         DispatchQueue.main.async { [weak self] in self?.checkForUpdates(); self?.lookUpTools() }
         watchForCheckRequests()
+        UsageReader.onStall = { Diagnostics.log($0) }
         links = URLRouter.shared.$refresh.sink { [weak self] requested in
             guard requested else { return }
             DispatchQueue.main.async { URLRouter.shared.refresh = false; self?.refresh(force: true) }

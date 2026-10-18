@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Works with a Claude Code that has never been opened in Terminal: its one-time welcome screens are answered (keep the suggested text style, continue past the safety notes, decline the optional Terminal changes). If Claude Code ever stalls, the activity log records what it last showed.
+
 ## 1.1.6
 
 Refresh starts sooner. Settings no longer flashes when the app starts (at login or after an update), and it reopens after an update if it was open. After a one-click update the widget's background helper is restarted, so the widget runs the new version straight away (before, it could keep running the old one until the Mac restarted).
