@@ -2,7 +2,7 @@
 
 ## 1.1.2 (build 23) — 10/18/2026
 
-Troubleshooting report and 3-day activity log. Tests cover cleaning of personal details and the 3-day trim; the installed build wrote the expected launch, check and update lines on the development Mac. Notarization Accepted (submission ea3116b4-37fa-4d8b-9e6d-bb9995dedfad; app ZIP SHA-256 d608f1f9b57c7199432755ec60833d428b19c11ccc43ea8f6f2c0153ac4508dd).
+Troubleshooting report and 3-day activity log. Tests cover cleaning of personal details and the 3-day trim; the installed build wrote the expected launch, check and update lines on the development Mac. Notarization Accepted (submission 4edc3bd6-395d-4a6b-b96e-0112f1e21bf0; app ZIP SHA-256 8c0e92508d036b0337085acc4703fe4793d27714a1baa49b11057e63934d8191).
 
 ## 1.1.1 (build 22) — 10/18/2026
 

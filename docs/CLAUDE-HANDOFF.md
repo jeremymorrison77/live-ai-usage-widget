@@ -6,7 +6,7 @@ Current version: **1.1.2 (build 23), Apple Silicon, macOS 14+**, published as a 
 
 - Name: Live AI Usage Widget. Bundle identifier `com.liveaiusagewidget.app`, widget `com.liveaiusagewidget.app.widget`, app group `TEAMID.com.liveaiusagewidget.app`, link scheme `live-ai-usage-widget://`.
 - The app is a menu bar app (no Dock icon): one iconned line per account, then Settings, Check now and Quit. It opens one setup window (Setup help steps, hidden once all are done with a Setup help link to show them, accounts, appearance, updates interval, small-widget readings; Setup help and Save settings centered at the bottom). There is no separate preview window. Connecting needs no Terminal: background install, browser sign-in, and automatic trust of the app's own probe folder. Clean is the default style.
-- Tests, compile-only build, source export and CI pass. 1.1.2 is notarized (submission `ea3116b4-37fa-4d8b-9e6d-bb9995dedfad`), app ZIP SHA-256 `d608f1f9b57c7199432755ec60833d428b19c11ccc43ea8f6f2c0153ac4508dd`.
+- Tests, compile-only build, source export and CI pass. 1.1.2 is notarized (submission `4edc3bd6-395d-4a6b-b96e-0112f1e21bf0`), app ZIP SHA-256 `8c0e92508d036b0337085acc4703fe4793d27714a1baa49b11057e63934d8191`.
 - The README picture `docs/images/overview.png` is drawn by `bash scripts/render_overview.sh` from the app's real views with sample data, then stripped of metadata. `scripts/package.py` refuses PNGs that carry metadata.
 
 Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for what is still untested.
