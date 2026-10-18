@@ -103,7 +103,7 @@ enum UsageReader {
         text.replacingOccurrences(of: pattern, with: value, options: .regularExpression)
     }
     static func iso(_ date: Date) -> String { ISO8601DateFormatter().string(from: date) }
-    static func find(_ provider: String) throws -> String {
+    static func find(_ provider: String, askShell: Bool = true) throws -> String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let name = provider == "claude" ? "claude" : "codex"
         // Official installer first, then Homebrew and the usual npm, Bun and Volta global folders.
@@ -115,8 +115,45 @@ enum UsageReader {
             paths = ["/Applications/Codex.app/Contents/Resources/codex", "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"] + paths
         }
         paths += (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":").map { String($0) + "/" + name }
-        guard let binary = paths.first(where: { $0.hasPrefix("/") && FileManager.default.isExecutableFile(atPath: $0) }) else { throw ReaderFailure("cli_unavailable") }
-        return binary
+        if let binary = paths.first(where: { $0.hasPrefix("/") && FileManager.default.isExecutableFile(atPath: $0) }) { return binary }
+        // Anywhere else (fnm, asdf, mise, pnpm, a custom npm folder…): ask the person's own Terminal setup.
+        if askShell, let binary = shellLookup(name) { return binary }
+        if !askShell, let binary = rememberedLookup(name) { return binary }
+        throw ReaderFailure("cli_unavailable")
+    }
+    private static let lookupLock = NSLock()
+    nonisolated(unsafe) private static var lookups: [String: (path: String?, at: Date)] = [:]
+    /// The last Terminal answer, without asking again (for screens, which must never wait).
+    static func rememberedLookup(_ name: String) -> String? {
+        lookupLock.lock(); defer { lookupLock.unlock() }
+        return lookups[name]?.path
+    }
+    /// Forgets earlier Terminal answers, for example right before deciding whether to install.
+    static func forgetLookups() { lookupLock.lock(); lookups = [:]; lookupLock.unlock() }
+    /// Runs the person's login shell the way Terminal does and asks where the tool is. Remembered for a minute,
+    /// since screens ask often; gives up after five seconds.
+    static func shellLookup(_ name: String) -> String? {
+        lookupLock.lock()
+        if let known = lookups[name], Date().timeIntervalSince(known.at) < 60 { lookupLock.unlock(); return known.path }
+        lookupLock.unlock()
+        let shell = ProcessInfo.processInfo.environment["SHELL"].flatMap { FileManager.default.isExecutableFile(atPath: $0) ? $0 : nil } ?? "/bin/zsh"
+        let process = Process(), pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: shell)
+        process.arguments = ["-ilc", "command -v " + name]
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        var found: String?
+        if (try? process.run()) != nil {
+            let deadline = Date().addingTimeInterval(5)
+            while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+            if process.isRunning { process.terminate() }
+            let text = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            found = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
+                .last { $0.hasPrefix("/") && $0.hasSuffix("/" + name) && FileManager.default.isExecutableFile(atPath: $0) }
+        }
+        lookupLock.lock(); lookups[name] = (found, Date()); lookupLock.unlock()
+        return found
     }
     static func number(_ value: Any?) -> Double? {
         guard let value = value as? NSNumber, CFGetTypeID(value) != CFBooleanGetTypeID(), value.doubleValue.isFinite else { return nil }

@@ -19,9 +19,9 @@ import UniformTypeIdentifiers
     private var links: AnyCancellable?
     init() {
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh(); self?.checkForUpdates() }
+            Task { @MainActor in self?.refresh(); self?.checkForUpdates(); self?.lookUpTools() }
         }
-        DispatchQueue.main.async { [weak self] in self?.checkForUpdates() }
+        DispatchQueue.main.async { [weak self] in self?.checkForUpdates(); self?.lookUpTools() }
         watchForCheckRequests()
         links = URLRouter.shared.$refresh.sink { [weak self] requested in
             guard requested else { return }
@@ -163,7 +163,15 @@ import UniformTypeIdentifiers
             return a?.observedAt != b?.observedAt || a?.refresh?.status != b?.refresh?.status || a?.refresh?.lastAttemptAt != b?.refresh?.lastAttemptAt
         }
     }
-    func installed(_ provider: String) -> Bool { (try? UsageReader.find(provider)) != nil }
+    /// Screens never wait on Terminal: they use the common places plus the last background answer.
+    func installed(_ provider: String) -> Bool { (try? UsageReader.find(provider, askShell: false)) != nil }
+    /// Asks Terminal in the background where each tool lives, then redraws.
+    func lookUpTools() {
+        Task.detached {
+            for provider in ["claude", "codex"] { _ = try? UsageReader.find(provider) }
+            await MainActor.run { self.objectWillChange.send() }
+        }
+    }
     /// The one name used for each account everywhere: menus, buttons, settings, widget and docs.
     func toolName(_ provider: String) -> String { WidgetStatus.name(provider) }
     /// Turns an account on and does whatever is missing: install, browser sign-in, then a fresh reading.
@@ -259,6 +267,13 @@ import UniformTypeIdentifiers
     }
     func install(_ provider: String) { Task { await installNow(provider) } }
     func installNow(_ provider: String) async {
+        // Never add a second copy: look again everywhere, including the person's Terminal setup, first.
+        UsageReader.forgetLookups()
+        if await Task.detached(operation: { (try? UsageReader.find(provider)) != nil }).value {
+            Diagnostics.log(toolName(provider) + ": already installed, install skipped")
+            objectWillChange.send()
+            return
+        }
         let claude = provider == "claude"
         working[provider] = "Installing…"
         Diagnostics.log(toolName(provider) + ": install started")
@@ -273,7 +288,7 @@ import UniformTypeIdentifiers
             do { try process.run(); process.waitUntilExit(); return process.terminationStatus == 0 } catch { return false }
         }.value
         working[provider] = nil
-        let place = (try? UsageReader.find(provider)).map { ", found at " + $0 } ?? ", not found"
+        let place = (try? UsageReader.find(provider, askShell: false)).map { ", found at " + $0 } ?? ", not found"
         Diagnostics.log("\(toolName(provider)): install \(ok ? "finished" : "failed")\(place)")
         message = ok ? "" : "Couldn't install " + toolName(provider) + ". Check your internet connection and try again."
         objectWillChange.send()
@@ -312,7 +327,7 @@ import UniformTypeIdentifiers
         let claude = providers.contains("claude") && settings.enabled.contains("claude")
         Task {
             // Claude Code asks once whether to trust the folder it runs in; answer it for the app's own empty folder.
-            if claude && (try? UsageReader.find("claude")) != nil {
+            if claude && (try? UsageReader.find("claude", askShell: false)) != nil {
                 working["claude"] = "Checking…"
                 try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
                 let trust: String = await Task.detached {

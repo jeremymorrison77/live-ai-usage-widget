@@ -59,6 +59,8 @@ import Darwin
         precondition(Mover.shouldOffer(URL(fileURLWithPath: "/private/var/folders/x/T/AppTranslocation/ABC/d/Live AI Usage Widget.app")))
         precondition(Mover.shouldOffer(URL(fileURLWithPath: home + "/Downloads/Live AI Usage Widget.app")))
         precondition(!Mover.shouldOffer(URL(fileURLWithPath: "/Applications/Live AI Usage Widget.app")))
+        // Tools found only through the person's Terminal setup are still found.
+        precondition(UsageReader.shellLookup("ls") == "/bin/ls", "Terminal lookup failed")
         // Updates: version order and the GitHub release reply.
         precondition(Updater.isNewer("1.1.1", than: "1.1.0") && Updater.isNewer("v1.10.0", than: "1.9.9") && Updater.isNewer("2.0", than: "1.9.9"))
         precondition(!Updater.isNewer("1.1.0", than: "1.1.0") && !Updater.isNewer("1.0.9", than: "1.1.0"))
