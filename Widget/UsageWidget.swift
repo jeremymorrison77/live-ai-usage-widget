@@ -25,6 +25,10 @@ struct Provider: TimelineProvider {
             let ticks = stride(from: start, to: 120, by: 1).map { StatusEntry(date: since.addingTimeInterval($0), status: status) }
             entries = ticks + entries.filter { $0.date >= since.addingTimeInterval(120) }
             entries.insert(StatusEntry(date: now, status: status), at: 0)
+        } else if let reveal = status?.revealAt, reveal > now, reveal.timeIntervalSince(now) < 10 {
+            // Empty now, full a moment later: the change between the two entries animates the growth.
+            entries = [StatusEntry(date: now, status: status)] + entries.map { StatusEntry(date: max($0.date, reveal), status: $0.status) }
+            entries = entries.enumerated().filter { $0.offset == 0 || $0.offset == 1 || $0.element.date > reveal }.map(\.element)
         }
         completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(300))))
     }

@@ -78,7 +78,7 @@ struct TrendsStatusView: View {
             let activity = UsageHistory.activity(history, at: date)
             let color = waiting ? Color.secondary : settings.color(for: window.leftPercent)
             // While a requested check runs everything sits at zero; the new reading then grows in and eases to a stop.
-            let checking = status?.checking(at: date) == true
+            let checking = status?.emptied(at: date) == true
             let left = checking || waiting ? 0 : window.leftPercent
             // Widgets allow up to two seconds of animation; use all of it, slowing to a stop.
             let grow = Animation.easeOut(duration: 2)
@@ -109,11 +109,12 @@ struct TrendsStatusView: View {
                         .animation(grow, value: checking)
                 } else if settings.style == "clean" {
                     GeometryReader { geometry in
+                        // The fill is one full-width piece that slides in from the left, so it grows rather than fades.
                         ZStack(alignment: .leading) {
                             Capsule().fill(color.opacity(0.12))
-                            Capsule().fill(color).frame(width: geometry.size.width * left / 100)
+                            Capsule().fill(color).offset(x: -geometry.size.width * (1 - left / 100))
                                 .animation(grow, value: left)
-                        }
+                        }.clipShape(Capsule())
                     }.frame(height: large ? 5 : 3).padding(.top, 2)
                 }
                 if large || !compact || roomy {
@@ -142,15 +143,18 @@ struct TrendsStatusView: View {
         return HStack(spacing: 3) {
             if failed { Image(systemName: "exclamationmark.triangle.fill") }
             // Only a real failed check says "Failed"; otherwise the time of the last reading, with the warning sign when it is old.
-            let checking = status?.checking(at: date) == true
+            let checking = status?.emptied(at: date) == true
             Text(checking ? "Checking…" : status?.usageFailureText() ?? (compact ? "" : "Last refresh ") + WidgetStatus.updateDateLabel(status?.usageObservedAt))
                 .lineLimit(1).minimumScaleFactor(0.8)
             Spacer(minLength: 2)
-            if checking, let since = status?.checkingSince {
-                // Widgets can't run a spinner, so the arrow turns a step with each one-second entry, animated in between.
-                let angle = max(0, date.timeIntervalSince(since).rounded()) * 120
-                Image(systemName: "arrow.clockwise")
+            if checking {
+                // Widgets can't run a spinner, so a centered arc turns a step with each one-second entry, animated in between.
+                let angle = max(0, date.timeIntervalSince(status?.checkingSince ?? date).rounded()) * 180
+                Circle().trim(from: 0, to: 0.7)
+                    .stroke(style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
+                    .frame(width: 9, height: 9)
                     .rotationEffect(.degrees(angle)).animation(.linear(duration: 1), value: angle)
+                    .frame(width: 11, height: 11)
                     .accessibilityLabel("Checking usage")
             } else {
                 Link(destination: URL(string: "live-ai-usage-widget://refresh")!) { Image(systemName: "arrow.clockwise") }

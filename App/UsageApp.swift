@@ -307,6 +307,12 @@ import UniformTypeIdentifiers
         }
     }
     func refresh(force: Bool = false) {
+        // A check the user asked for shows on the widget at once, even if a regular check is still running.
+        if force && !checkingUsage {
+            checkingUsage = true
+            try? StatusStore.setChecking(Date())
+            WidgetCenter.shared.reloadAllTimelines()
+        }
         // A request during a check runs once that check ends, so a new connection is never skipped.
         guard !busy else { refreshAgain = true; forceAgain = forceAgain || force; return }
         let settings = self.settings
@@ -315,12 +321,6 @@ import UniformTypeIdentifiers
         let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
         // Background checks stay quiet so the window never shifts while it is open.
         busy = true
-        // A check the user asked for shows progress on the widget, then the new reading grows in.
-        if force {
-            checkingUsage = true
-            try? StatusStore.setChecking(Date())
-            WidgetCenter.shared.reloadAllTimelines()
-        }
         Task {
             let payload: Data? = await Task.detached {
                 try? Collector.run(root: root, generation: settings.generation, providers: settings.enabled, interval: Double(settings.refreshMinutes) * 60, force: force)

@@ -204,8 +204,12 @@ struct WidgetStatus: Codable {
     var usageHistory: [String: [UsageObservation]]? = nil
     /// Set while a check the user asked for is running, so the widget can show progress.
     var checkingSince: Date? = nil
+    /// When the new reading should grow in: a moment after the check ends, so the widget shows empty, then full.
+    var revealAt: Date? = nil
     /// True while that check runs (never longer than two minutes, in case the app quit mid-check).
     func checking(at date: Date) -> Bool { checkingSince.map { date >= $0.addingTimeInterval(-5) && date.timeIntervalSince($0) < 120 } ?? false }
+    /// Readings show as empty while checking and until the reveal moment.
+    func emptied(at date: Date) -> Bool { checking(at: date) || (revealAt.map { date < $0 && $0.timeIntervalSince(date) < 10 } ?? false) }
     /// Sample readings for the widget gallery only; never written to storage.
     static var preview: WidgetStatus {
         let now = Date(), hour: TimeInterval = 3600
@@ -346,6 +350,7 @@ enum StatusStore {
         let destination = try url ?? fileURL()
         try locked(destination) {
             var value = load(from: destination) ?? WidgetStatus()
+            if date == nil, value.checkingSince != nil { value.revealAt = Date().addingTimeInterval(1) }
             value.checkingSince = date
             try JSONEncoder().encode(value).write(to: destination, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
