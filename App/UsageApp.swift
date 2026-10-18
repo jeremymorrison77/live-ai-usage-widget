@@ -22,6 +22,7 @@ import UniformTypeIdentifiers
             Task { @MainActor in self?.refresh(); self?.checkForUpdates() }
         }
         DispatchQueue.main.async { [weak self] in self?.checkForUpdates() }
+        watchForCheckRequests()
         links = URLRouter.shared.$refresh.sink { [weak self] requested in
             guard requested else { return }
             DispatchQueue.main.async { URLRouter.shared.refresh = false; self?.refresh(force: true) }
@@ -48,6 +49,23 @@ import UniformTypeIdentifiers
     }
     /// Set only by the README picture renderer, which has no app bundle.
     nonisolated(unsafe) static var sampleVersion: String?
+    private var requestWatcher: DispatchSourceFileSystemObject?
+    /// The widget's refresh button writes a request into the shared folder; check usage the moment it appears.
+    private func watchForCheckRequests() {
+        guard let request = StatusStore.checkRequestURL else { return }
+        let folder = open(request.deletingLastPathComponent().path, O_EVTONLY)
+        guard folder >= 0 else { return }
+        let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: folder, eventMask: .write, queue: .main)
+        source.setEventHandler { [weak self] in
+            guard FileManager.default.fileExists(atPath: request.path) else { return }
+            try? FileManager.default.removeItem(at: request)
+            Diagnostics.log("Widget refresh button pressed")
+            self?.refresh(force: true)
+        }
+        source.setCancelHandler { close(folder) }
+        source.resume()
+        requestWatcher = source
+    }
     static var version: String { sampleVersion ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
     /// Checks GitHub at launch and then once a day when automatic checks are on; `manual` checks right away.
     func checkForUpdates(manual: Bool = false) {

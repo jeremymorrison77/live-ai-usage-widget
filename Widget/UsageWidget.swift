@@ -1,5 +1,17 @@
 import SwiftUI
 import WidgetKit
+import AppIntents
+
+/// The widget's refresh button. It runs inside the widget, so "Checking…" shows the moment it is clicked;
+/// the app, watching for the request, then checks usage.
+struct CheckUsageIntent: AppIntent {
+    static var title: LocalizedStringResource = "Check usage now"
+    func perform() async throws -> some IntentResult {
+        try? StatusStore.setChecking(Date())
+        try? StatusStore.requestCheck()
+        return .result()
+    }
+}
 
 struct StatusEntry: TimelineEntry {
     let date: Date
@@ -49,6 +61,7 @@ struct WidgetView: View {
 }
 @main
 struct UsageWidget: Widget {
+    init() { RefreshButton.intent = CheckUsageIntent() }
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: StatusStore.kind, provider: Provider()) { WidgetView(entry: $0) }
             .configurationDisplayName("Live AI Usage Widget")

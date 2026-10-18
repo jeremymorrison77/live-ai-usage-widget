@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import AppIntents
 
 /// Widget body. No padding of its own: WidgetKit supplies the content margins around `containerBackground`.
 /// Desktop widgets usually render tinted, so hierarchy comes from size, weight and opacity, and every state
@@ -78,10 +79,14 @@ struct TrendsStatusView: View {
             let activity = UsageHistory.activity(history, at: date)
             let color = waiting ? Color.secondary : settings.color(for: window.leftPercent)
             // While a requested check runs everything sits at zero; the new reading then grows in and eases to a stop.
-            let checking = status?.emptied(at: date) == true
-            let left = checking || waiting ? 0 : window.leftPercent
-            // Widgets allow up to two seconds of animation; use all of it, slowing to a stop.
-            let grow = Animation.easeOut(duration: 2)
+            // A check the user asked for: the old reading fades away in place, then the new one grows in from zero.
+            let phase: Phase = status?.checking(at: date) == true ? .fading : status?.emptied(at: date) == true ? .empty : .shown
+            let checking = phase != .shown
+            let left = waiting ? 0 : phase == .fading ? window.leftPercent : phase == .empty ? 0 : window.leftPercent
+            let visible = phase == .shown ? 1.0 : 0.0
+            // Widgets allow up to two seconds of animation; growth uses all of it, slowing to a stop. Only growth moves.
+            let grow: Animation? = phase == .shown ? .easeOut(duration: 2) : nil
+            let fade = Animation.easeOut(duration: 0.4)
             HStack(spacing: compact ? 5 : 8) {
                 if settings.style == "solar" {
                     ZStack {
@@ -90,6 +95,7 @@ struct TrendsStatusView: View {
                             .stroke(color, style: StrokeStyle(lineWidth: compact ? 2 : 3, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .animation(grow, value: left)
+                            .opacity(visible).animation(fade, value: visible)
                     }.frame(width: compact ? (roomy ? 19 : 14) : 24, height: compact ? (roomy ? 19 : 14) : 24)
                 }
                 VStack(alignment: .leading, spacing: 1) {
@@ -99,14 +105,14 @@ struct TrendsStatusView: View {
                     Spacer(minLength: 1)
                     Text(waiting || checking ? "…" : "\(Int(window.leftPercent.rounded()))%")
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
-                        .contentTransition(.numericText(value: left)).animation(grow, value: left)
+                        .contentTransition(.numericText(value: left)).animation(grow ?? fade, value: left)
                 }.font(.system(size: large ? 13 : compact ? 10 : 11))
                 if settings.style == "trends" {
                     UsageSparkline(activity: activity, date: date, color: color)
                         .frame(height: large ? 18 : roomy ? 14 : 8)
-                        .scaleEffect(x: 1, y: checking ? 0.02 : 1, anchor: .bottom)
-                        .opacity(checking ? 0.3 : 1)
-                        .animation(grow, value: checking)
+                        .scaleEffect(x: 1, y: phase == .empty ? 0.02 : 1, anchor: .bottom)
+                        .animation(grow, value: phase)
+                        .opacity(visible).animation(fade, value: visible)
                 } else if settings.style == "clean" {
                     GeometryReader { geometry in
                         // The fill is one full-width piece that slides in from the left, so it grows rather than fades.
@@ -114,6 +120,7 @@ struct TrendsStatusView: View {
                             Capsule().fill(color.opacity(0.12))
                             Capsule().fill(color).offset(x: -geometry.size.width * (1 - left / 100))
                                 .animation(grow, value: left)
+                                .opacity(visible).animation(fade, value: visible)
                         }.clipShape(Capsule())
                     }.frame(height: large ? 5 : 3).padding(.top, 2)
                 }
@@ -157,15 +164,29 @@ struct TrendsStatusView: View {
                     .frame(width: 11, height: 11)
                     .accessibilityLabel("Checking usage")
             } else {
-                Link(destination: URL(string: "live-ai-usage-widget://refresh")!) { Image(systemName: "arrow.clockwise") }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Refresh widget")
+                RefreshButton()
             }
             Link(destination: URL(string: "live-ai-usage-widget://settings")!) { Image(systemName: "gearshape") }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Open settings")
         }.font(.system(size: 10)).foregroundStyle(.secondary)
     }
+}
+
+private enum Phase { case fading, empty, shown }
+
+/// In the widget a button that checks at once; elsewhere (pictures, gallery) the same arrow as a link.
+struct RefreshButton: View {
+    var body: some View {
+        if #available(macOS 14.0, *), let intent = RefreshButton.intent {
+            Button(intent: intent) { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).accessibilityLabel("Check usage now")
+        } else {
+            Link(destination: URL(string: "live-ai-usage-widget://refresh")!) { Image(systemName: "arrow.clockwise") }
+                .buttonStyle(.plain).accessibilityLabel("Check usage now")
+        }
+    }
+    /// Set by the widget so the shared view can use its intent without the app knowing about it.
+    nonisolated(unsafe) static var intent: (any AppIntent)?
 }
 
 struct UsageSparkline: View {

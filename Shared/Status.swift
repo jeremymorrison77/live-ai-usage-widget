@@ -345,6 +345,12 @@ enum StatusStore {
         else { return nil }
         return try? JSONDecoder().decode(WidgetStatus.self, from: data)
     }
+    /// The widget's request for a check, picked up by the app as soon as it is written.
+    static var checkRequestURL: URL? { try? fileURL().deletingLastPathComponent().appendingPathComponent("check-request") }
+    static func requestCheck() throws {
+        guard let url = checkRequestURL else { return }
+        try Data().write(to: url, options: .atomic)
+    }
     /// Marks a user-requested check as started (a date) or finished (nil).
     static func setChecking(_ date: Date?, to url: URL? = nil) throws {
         let destination = try url ?? fileURL()
