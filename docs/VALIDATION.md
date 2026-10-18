@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.1.9 (build 30) — 10/18/2026
+
+Release ZIP, marked as downloaded and opened from Downloads on a fresh macOS 15.7.7 virtual Mac with both tools signed in: Gatekeeper, Move to Applications, then both accounts connected by themselves in 12 seconds. In-app update from 1.1.8 on another fresh test Mac: updated in about 1 second, both accounts still connected. Published files downloaded back and checksums matched. Notarization Accepted (submission 99935e08-6610-42f7-8f88-88ff59cfdb62; app ZIP SHA-256 1ad73907c795f79a742167dd3cc3c3936353ceb8999fd1b34a61fccf809676bb).
+
 ## 1.1.8 (build 29) — 10/18/2026
 
 Release ZIP installed on a fresh macOS 15.7.7 virtual Mac with Claude Code 2.1.302 signed in but never opened (the tester's state): Connect → folder trust ok → readings in about 12 seconds. Same state with 1.1.7 reproduced the tester's stall. Notarization Accepted (submission 65086bdb-0929-49d0-9e38-0c017eb53784; app ZIP SHA-256 ddb7277a5e0288482bcf8b3f4bf314dc4629924f8e3a5fd4f07f3f39aecfcbaa).
