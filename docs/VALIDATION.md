@@ -4,6 +4,15 @@
 
 Release ZIP installed on a fresh macOS 15.7.7 virtual Mac with Claude Code 2.1.302 signed in but never opened (the tester's state): Connect → folder trust ok → readings in about 12 seconds. Same state with 1.1.7 reproduced the tester's stall. Notarization Accepted (submission 65086bdb-0929-49d0-9e38-0c017eb53784; app ZIP SHA-256 ddb7277a5e0288482bcf8b3f4bf314dc4629924f8e3a5fd4f07f3f39aecfcbaa).
 
+New-user matrix, 10/18/2026, published 1.1.8 ZIP (checksum matched), marked as downloaded and opened from Downloads on fresh macOS 15.7.7 virtual Macs:
+- Neither tool: Gatekeeper prompt, Move to Applications offer, both accounts show Install. Install worked for Claude Code (13 s) and ChatGPT Codex (5 s). Connect without sign-in opens claude.ai sign-in in Safari (not completed).
+- Claude Code alone (signed in, never opened): Connect → folder trust → three readings in 13 s.
+- ChatGPT Codex alone: first launch connected it by itself in 1 s; Claude Code shows Install.
+- Both: first launch connected both by itself in 9 s. ChatGPT sign-in through the app's own browser sign-in worked (device-code sign-in is off on the owner's account).
+- Login item points to /Applications after the move and reopened the app after a restart.
+- Bug: opened from Downloads and moved, first-launch auto-connect is skipped. The hidden first copy marks it done, then quits for the move before it finishes; the moved copy then shows Connect.
+- Minor: while ChatGPT sign-in was still open, a check reported ChatGPT as rate limited rather than not signed in.
+
 ## 1.1.7 (build 28) — 10/18/2026
 
 First-run Claude Code handling tested with a scripted fake that shows the three welcome screens; the real fresh-install case awaits the tester's update. Notarization Accepted (submission 24ee8af2-33f8-47ba-9198-e5f629dbea5b; app ZIP SHA-256 3e076324cdcc81e7c1016f17cbc6868e8ea2b5502e2fd4b366e38f753543d663).
