@@ -77,13 +77,18 @@ struct TrendsStatusView: View {
             let history = status?.usageHistory?[UsageHistory.key(agent, window.window)] ?? []
             let activity = UsageHistory.activity(history, at: date)
             let color = waiting ? Color.secondary : settings.color(for: window.leftPercent)
+            // While a requested check runs everything sits at zero; the new reading then grows in and eases to a stop.
+            let checking = status?.checking(at: date) == true
+            let left = checking || waiting ? 0 : window.leftPercent
+            let grow = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 1.6)
             HStack(spacing: compact ? 5 : 8) {
                 if settings.style == "solar" {
                     ZStack {
                         Circle().stroke(color.opacity(0.15), lineWidth: compact ? 2 : 3)
-                        Circle().trim(from: 0, to: window.leftPercent / 100)
+                        Circle().trim(from: 0, to: left / 100)
                             .stroke(color, style: StrokeStyle(lineWidth: compact ? 2 : 3, lineCap: .round))
                             .rotationEffect(.degrees(-90))
+                            .animation(grow, value: left)
                     }.frame(width: compact ? (roomy ? 19 : 14) : 24, height: compact ? (roomy ? 19 : 14) : 24)
                 }
                 VStack(alignment: .leading, spacing: 1) {
@@ -91,17 +96,22 @@ struct TrendsStatusView: View {
                     Text(WidgetStatus.name(agent) + " · " + shortName(window.window))
                         .foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.75)
                     Spacer(minLength: 1)
-                    Text(waiting ? "…" : "\(Int(window.leftPercent.rounded()))%")
+                    Text(waiting || checking ? "…" : "\(Int(window.leftPercent.rounded()))%")
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
+                        .contentTransition(.numericText(value: left)).animation(grow, value: left)
                 }.font(.system(size: large ? 13 : compact ? 10 : 11))
                 if settings.style == "trends" {
                     UsageSparkline(activity: activity, date: date, color: color)
                         .frame(height: large ? 18 : roomy ? 14 : 8)
+                        .scaleEffect(x: 1, y: checking ? 0.02 : 1, anchor: .bottom)
+                        .opacity(checking ? 0.3 : 1)
+                        .animation(grow, value: checking)
                 } else if settings.style == "clean" {
                     GeometryReader { geometry in
                         ZStack(alignment: .leading) {
                             Capsule().fill(color.opacity(0.12))
-                            Capsule().fill(color).frame(width: geometry.size.width * window.leftPercent / 100)
+                            Capsule().fill(color).frame(width: geometry.size.width * left / 100)
+                                .animation(grow, value: left)
                         }
                     }.frame(height: large ? 5 : 3).padding(.top, 2)
                 }
@@ -131,12 +141,20 @@ struct TrendsStatusView: View {
         return HStack(spacing: 3) {
             if failed { Image(systemName: "exclamationmark.triangle.fill") }
             // Only a real failed check says "Failed"; otherwise the time of the last reading, with the warning sign when it is old.
-            Text(status?.usageFailureText() ?? (compact ? "" : "Last refresh ") + WidgetStatus.updateDateLabel(status?.usageObservedAt))
+            let checking = status?.checking(at: date) == true
+            Text(checking ? "Checking…" : status?.usageFailureText() ?? (compact ? "" : "Last refresh ") + WidgetStatus.updateDateLabel(status?.usageObservedAt))
                 .lineLimit(1).minimumScaleFactor(0.8)
             Spacer(minLength: 2)
-            Link(destination: URL(string: "live-ai-usage-widget://refresh")!) { Image(systemName: "arrow.clockwise") }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Refresh widget")
+            if checking, let since = status?.checkingSince {
+                // Widgets can't run an endless spinner; this system circle keeps moving while the check runs.
+                ProgressView(timerInterval: since...since.addingTimeInterval(30), countsDown: false) { EmptyView() } currentValueLabel: { EmptyView() }
+                    .progressViewStyle(.circular).tint(.secondary).frame(width: 11, height: 11).scaleEffect(0.5)
+                    .accessibilityLabel("Checking usage")
+            } else {
+                Link(destination: URL(string: "live-ai-usage-widget://refresh")!) { Image(systemName: "arrow.clockwise") }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Refresh widget")
+            }
             Link(destination: URL(string: "live-ai-usage-widget://settings")!) { Image(systemName: "gearshape") }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Open settings")

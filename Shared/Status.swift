@@ -202,6 +202,10 @@ extension UsageWindow {
 struct WidgetStatus: Codable {
     var usage: [String: AgentUsage]? = nil
     var usageHistory: [String: [UsageObservation]]? = nil
+    /// Set while a check the user asked for is running, so the widget can show progress.
+    var checkingSince: Date? = nil
+    /// True while that check runs (never longer than two minutes, in case the app quit mid-check).
+    func checking(at date: Date) -> Bool { checkingSince.map { date >= $0.addingTimeInterval(-5) && date.timeIntervalSince($0) < 120 } ?? false }
     /// Sample readings for the widget gallery only; never written to storage.
     static var preview: WidgetStatus {
         let now = Date(), hour: TimeInterval = 3600
@@ -336,6 +340,16 @@ enum StatusStore {
         guard let file = try? url ?? fileURL(), let data = try? Data(contentsOf: file), data.count < 262144
         else { return nil }
         return try? JSONDecoder().decode(WidgetStatus.self, from: data)
+    }
+    /// Marks a user-requested check as started (a date) or finished (nil).
+    static func setChecking(_ date: Date?, to url: URL? = nil) throws {
+        let destination = try url ?? fileURL()
+        try locked(destination) {
+            var value = load(from: destination) ?? WidgetStatus()
+            value.checkingSince = date
+            try JSONEncoder().encode(value).write(to: destination, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
+        }
     }
     /// Only successful source observations can advance the reading timestamp.
     static func publishUsage(input: Data, to url: URL? = nil, enabled: [String]? = nil) throws -> WidgetStatus {

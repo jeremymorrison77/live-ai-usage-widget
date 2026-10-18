@@ -210,6 +210,7 @@ import UniformTypeIdentifiers
     @Published var connecting: Set<String> = []
     private var refreshAgain = false
     private var forceAgain = false
+    @Published var checkingUsage = false
     private var pendingSave: Task<Void, Never>?
     /// Settings apply as they change; a short pause lets a color drag or typing finish first.
     func saveSoon() {
@@ -314,12 +315,24 @@ import UniformTypeIdentifiers
         let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
         // Background checks stay quiet so the window never shifts while it is open.
         busy = true
+        // A check the user asked for shows progress on the widget, then the new reading grows in.
+        if force {
+            checkingUsage = true
+            try? StatusStore.setChecking(Date())
+            WidgetCenter.shared.reloadAllTimelines()
+        }
         Task {
             let payload: Data? = await Task.detached {
                 try? Collector.run(root: root, generation: settings.generation, providers: settings.enabled, interval: Double(settings.refreshMinutes) * 60, force: force)
             }.value
             defer {
                 busy = false
+                if force {
+                    checkingUsage = false
+                    try? StatusStore.setChecking(nil)
+                    status = StatusStore.load()
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
                 if refreshAgain { refreshAgain = false; let again = forceAgain; forceAgain = false; refresh(force: again) }
             }
             guard settings.generation == self.settings.generation else { refreshAgain = true; return }
@@ -337,7 +350,7 @@ import UniformTypeIdentifiers
                 // Only changes are written, so a quiet day adds a line or two, not hundreds.
                 if summary != lastSummary { Diagnostics.log("Check: " + summary); lastSummary = summary }
                 // macOS limits how often a background app may redraw widgets; spend that only on real changes.
-                if force || Self.changed(before, status) { WidgetCenter.shared.reloadAllTimelines() }
+                if !force && Self.changed(before, status) { WidgetCenter.shared.reloadAllTimelines() }
                 message = status?.usageFailureText() ?? ""
             } catch { message = "Couldn't save the readings. Try reinstalling the app." }
         }
@@ -412,7 +425,8 @@ struct MenuContent: View {
         }
         Divider()
         Button { open() } label: { Label("Settings…", systemImage: "gearshape") }
-        Button { model.refresh(force: true) } label: { Label("Check usage now", systemImage: "arrow.clockwise") }.disabled(model.settings.enabled.isEmpty)
+        Button { model.refresh(force: true) } label: { Label(model.checkingUsage ? "Checking usage…" : "Check usage now", systemImage: model.checkingUsage ? "hourglass" : "arrow.clockwise") }
+            .disabled(model.settings.enabled.isEmpty || model.checkingUsage)
         Divider()
         Button { NSApp.terminate(nil) } label: { Label("Quit Live AI Usage Widget", systemImage: "power") }
     }
