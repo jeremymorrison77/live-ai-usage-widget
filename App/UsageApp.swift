@@ -39,6 +39,9 @@ import Combine
             message = "Saved"
         } catch { message = "Couldn't save settings. Check the color percentages, or reinstall the app." }
     }
+    func isConnected(_ provider: String) -> Bool {
+        status?.usage?[provider]?.refresh?.status == .ok && status?.usage?[provider]?.isStale(at: Date()) == false
+    }
     /// Provider → what is happening right now, shown in the Connect window.
     @Published var working: [String: String] = [:]
     @Published var signInLink: [String: URL] = [:]
@@ -175,8 +178,25 @@ import Combine
 struct MenuContent: View {
     @ObservedObject var model: UsageModel
     @Environment(\.openWindow) private var openWindow
+    private func open(connecting provider: String? = nil) {
+        URLRouter.shared.connect = provider
+        NSApp.activate(ignoringOtherApps: true)
+        openWindow(id: "main")
+    }
     var body: some View {
-        Button("Settings…") { NSApp.activate(ignoringOtherApps: true); openWindow(id: "main") }
+        // Each account with its status; anything not connected opens its Connect window.
+        ForEach(["claude", "codex"], id: \.self) { provider in
+            let name = provider == "claude" ? "Claude" : "ChatGPT"
+            if !model.settings.enabled.contains(provider) {
+                Button(name + " · Off — Turn on…") { open() }
+            } else if model.isConnected(provider) {
+                Button { open() } label: { Label(name + " · Connected", systemImage: "checkmark.circle.fill") }
+            } else {
+                Button { open(connecting: provider) } label: { Label(name + " · Not connected — Connect…", systemImage: "exclamationmark.circle") }
+            }
+        }
+        Divider()
+        Button("Settings…") { open() }
         Button("Check now") { model.refresh(force: true) }.disabled(model.settings.enabled.isEmpty)
         Divider()
         Button("Quit Live AI Usage Widget") { NSApp.terminate(nil) }
@@ -278,7 +298,7 @@ struct SettingsView: View {
                                 model.save()
                             })).toggleStyle(.checkbox)
                         Spacer()
-                        let connected = model.status?.usage?[provider]?.refresh?.status == .ok && model.status?.usage?[provider]?.isStale(at: Date()) == false
+                        let connected = model.isConnected(provider)
                         Button { login = provider } label: {
                             Label(connected ? "Connected" : "Connect", systemImage: connected ? "checkmark.circle.fill" : "person.crop.circle")
                                 .foregroundStyle(connected ? Color.green : Color.primary).frame(width: 110)
@@ -341,6 +361,11 @@ struct SettingsView: View {
             }
             .frame(width: 520, height: 640)
             .onAppear { NSApp.activate(ignoringOtherApps: true); checkWidgets() }
+            .onReceive(URLRouter.shared.$connect) { provider in
+                guard let provider else { return }
+                URLRouter.shared.connect = nil
+                login = provider
+            }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in checkWidgets() }
             .sheet(isPresented: $showWidgetHelp) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -441,6 +466,8 @@ struct SettingsView: View {
     /// Set once anything asks for the window, so a quiet start never hides a window the user wanted.
     var settingsRequested = false
     @Published var refresh = false
+    /// A provider whose Connect window should open next time the settings window shows.
+    @Published var connect: String?
 }
 
 struct WidgetLinks: ViewModifier {
