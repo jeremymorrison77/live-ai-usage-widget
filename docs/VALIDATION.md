@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.2.0 (build 31) — 10/19/2026
+
+Release ZIP as a real download on a fresh macOS 15.7.7 test Mac with both tools signed in: moved itself, connected both by itself, US dates on by default, no update notice (latest was 1.1.9). In-app update from 1.1.9: about 1 second, both still connected, no notice left behind. Widget "Version X available" status line checked only in a drawn sample (all sizes, both styles); it first shows for real when a newer version than 1.2.0 is published. Published files downloaded back and checksums matched. Notarization Accepted (submission b7193822-12f1-4b56-b35a-409e4d89321b; app ZIP SHA-256 98c4bdecfc49ba0334dee94e3770f04a8eb074bad4780f1633b0ff0daa06f7bf).
+
 ## 1.1.9 (build 30) — 10/18/2026
 
 Release ZIP, marked as downloaded and opened from Downloads on a fresh macOS 15.7.7 virtual Mac with both tools signed in: Gatekeeper, Move to Applications, then both accounts connected by themselves in 12 seconds. In-app update from 1.1.8 on another fresh test Mac: updated in about 1 second, both accounts still connected. Published files downloaded back and checksums matched. Notarization Accepted (submission 99935e08-6610-42f7-8f88-88ff59cfdb62; app ZIP SHA-256 1ad73907c795f79a742167dd3cc3c3936353ceb8999fd1b34a61fccf809676bb).

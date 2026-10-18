@@ -1,12 +1,12 @@
 # Maintainer handoff
 
-Current version: **1.1.9 (build 30), Apple Silicon, macOS 14+**, published as a full GitHub release in the public repository. This repository is the whole project; it has no parent workspace.
+Current version: **1.2.0 (build 31), Apple Silicon, macOS 14+**, published as a full GitHub release in the public repository. This repository is the whole project; it has no parent workspace.
 
 ## Current state
 
 - Name: Live AI Usage Widget. Bundle identifier `com.liveaiusagewidget.app`, widget `com.liveaiusagewidget.app.widget`, app group `TEAMID.com.liveaiusagewidget.app`, link scheme `live-ai-usage-widget://`.
 - The app is a menu bar app (no Dock icon): one iconned line per account, then Settings, Check usage now and Quit. It opens one setup window (Setup help steps, hidden once all are done with a Setup help link to show them, accounts, appearance, updates interval, small-widget readings; settings apply as they change (no Save button); Setup help toggle at the bottom once set up). There is no separate preview window. Connecting needs no Terminal: background install, browser sign-in, and automatic trust of the app's own probe folder. Clean is the default style.
-- Tests, compile-only build, source export and CI pass. 1.1.9 is notarized (submission `99935e08-6610-42f7-8f88-88ff59cfdb62`), app ZIP SHA-256 `1ad73907c795f79a742167dd3cc3c3936353ceb8999fd1b34a61fccf809676bb`.
+- Tests, compile-only build, source export and CI pass. 1.2.0 is notarized (submission `b7193822-12f1-4b56-b35a-409e4d89321b`), app ZIP SHA-256 `98c4bdecfc49ba0334dee94e3770f04a8eb074bad4780f1633b0ff0daa06f7bf`.
 - The README picture `docs/images/overview.png` is drawn by `bash scripts/render_overview.sh` from the app's real views with sample data, then stripped of metadata. `scripts/package.py` refuses PNGs that carry metadata.
 
 Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for what is still untested.
@@ -19,6 +19,10 @@ Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for
 4. Push, wait for CI, then create a GitHub prerelease with the app ZIP, source ZIP and both `.sha256` files. Download them back and verify the checksums. Give the app ZIP the asset label "Download for Mac (Apple Silicon) - Live AI Usage Widget X.Y.Z" and update the README Download for Mac link to the new file name.
 
 Keep commits on the GitHub noreply address. Never add credentials, account screenshots or personal paths.
+
+## 1.2.0 (10/19/2026)
+
+US dates are the default (`WidgetSettings.usDates` true; saved choices kept). `WidgetSettings.availableUpdate` holds a newer GitHub version found by `checkForUpdates`; the widget footer shows "Version X available" (tap opens Settings) only while `autoUpdates` is on, and the app clears it once that version is installed. README picture: one column per style (Clean, Solar), small/medium/large. The status-line notice is untested live until a release newer than 1.2.0 exists.
 
 ## 1.1.9 (10/18/2026)
 
