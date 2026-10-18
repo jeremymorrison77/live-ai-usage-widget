@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Fixed Claude Code browser sign-in (Authorize led to a "can't be reached" page). The app checks for updates and installs them in one click after checking they are Apple-approved and from the same developer. Opened from Downloads, it offers to move itself into Applications. Finds Claude Code installed with npm, nvm, Bun or Volta. Setup help names the widget up front.
+
 ## 1.1.0
 
 Each account is one line: Claude Code or ChatGPT Codex and a single button that says what it will do (Install, Connect, Connecting…, Connected, or Sign in, Update, Finish setup, Try again, Open sign-in page). The spinner shows inside the button of the account that is working. Disconnecting one account no longer drops the other. Accounts are named Claude Code and ChatGPT Codex everywhere. The menu bar shows one line per account. First launch connects tools that are already signed in, and Open at login is on by default. The settings window can be resized and remembers its size, opens with nothing selected, and no longer shifts while checking in the background. A number typed into a field is kept when Save settings is clicked. A newly connected account appears on the widget right away with Loading… rows until its first reading arrives. The Get started section is now called Setup help, matching its button. Small widget readings lists limits your plan does not have (for example the 5-hour limit on ChatGPT Pro, or the weekly Fable limit outside Claude Max and Premium seats) grayed out as "Not included in your plan".

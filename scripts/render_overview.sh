@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 mkdir -p build/overview
 sed 's/^@main struct UsageApp/struct UsageApp/' App/UsageApp.swift > build/overview/UsageApp.swift
 xcrun swiftc -parse-as-library -module-cache-path build/module-cache \
-  Shared/Status.swift Shared/Settings.swift Shared/StatusView.swift Helper/Reader.swift Helper/Collector.swift \
+  Shared/Status.swift Shared/Settings.swift Shared/StatusView.swift Helper/Reader.swift Helper/Collector.swift Helper/Updater.swift \
   build/overview/UsageApp.swift tests/RenderOverview.swift -o build/overview/render
 build/overview/render build/overview/overview.png
 # Strip metadata; packaging refuses pictures that carry any.

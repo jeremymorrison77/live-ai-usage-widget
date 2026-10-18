@@ -45,6 +45,18 @@ import Darwin
         // A real PTY protocol using synthetic panel output, never the real provider.
         let date = Date(); let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.timeZone = TimeZone(secondsFromGMT: 0); formatter.dateFormat = "h:mma"
         let reset = formatter.string(from: date.addingTimeInterval(3600))
+        // Moving to Applications is offered only for hidden copies and Downloads or Desktop.
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        precondition(Mover.shouldOffer(URL(fileURLWithPath: "/private/var/folders/x/T/AppTranslocation/ABC/d/Live AI Usage Widget.app")))
+        precondition(Mover.shouldOffer(URL(fileURLWithPath: home + "/Downloads/Live AI Usage Widget.app")))
+        precondition(!Mover.shouldOffer(URL(fileURLWithPath: "/Applications/Live AI Usage Widget.app")))
+        // Updates: version order and the GitHub release reply.
+        precondition(Updater.isNewer("1.1.1", than: "1.1.0") && Updater.isNewer("v1.10.0", than: "1.9.9") && Updater.isNewer("2.0", than: "1.9.9"))
+        precondition(!Updater.isNewer("1.1.0", than: "1.1.0") && !Updater.isNewer("1.0.9", than: "1.1.0"))
+        let reply = Data(#"{"tag_name":"v1.1.1","draft":false,"prerelease":false,"assets":[{"name":"live-ai-usage-widget-1.1.1-source.zip","browser_download_url":"https://github.com/o/r/releases/download/v1.1.1/s.zip"},{"name":"Live-AI-Usage-Widget-1.1.1-macOS-arm64.zip","browser_download_url":"https://github.com/o/r/releases/download/v1.1.1/Live-AI-Usage-Widget-1.1.1-macOS-arm64.zip"},{"name":"Live-AI-Usage-Widget-1.1.1-macOS-arm64.zip.sha256","browser_download_url":"https://github.com/o/r/releases/download/v1.1.1/Live-AI-Usage-Widget-1.1.1-macOS-arm64.zip.sha256"}]}"#.utf8)
+        let found = Updater.release(from: reply)
+        precondition(found?.version == "1.1.1" && found?.app.lastPathComponent == "Live-AI-Usage-Widget-1.1.1-macOS-arm64.zip" && found?.checksum.pathExtension == "sha256")
+        precondition(Updater.release(from: Data(#"{"tag_name":"v9","prerelease":true,"assets":[]}"#.utf8)) == nil)
         // Claude Code's sign-in offers "Paste code here if prompted" and must keep running until the browser finishes.
         let login = try script("printf 'Opening browser to sign in: https://claude.ai/oauth/authorize?x=1\\nPaste code here if prompted > '\nsleep 2\nprintf '\\nLogin successful.\\n'\n")
         var opened: URL?

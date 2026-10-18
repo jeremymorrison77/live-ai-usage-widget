@@ -14,9 +14,9 @@ Pictures are drawn from the app's own views with made-up sample readings, not a 
 
 1. Click **Download for Mac** above, or open the [latest release](../../releases/latest) and under Assets click "Download for Mac (Apple Silicon)". The checksum files are optional.
 2. Double-click the ZIP to unzip it and drag **Live AI Usage Widget** into Applications.
-3. Open it. The setup window appears; follow its Setup help steps.
+3. Open it from Applications. If you open it from Downloads instead, it offers to move itself into Applications. The setup window appears; follow its Setup help steps.
 
-The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): one line per account (Claude Code, ChatGPT Codex), then Settings, Check now and Quit. To update later, quit it from that menu, replace it in Applications and reopen it; your settings are kept.
+The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): one line per account (Claude Code, ChatGPT Codex), then Settings, Check now and Quit. Updates: the app checks GitHub once a day and the menu shows "Update to version X" when one is out. One click downloads it, checks it is Apple-approved and from the same developer, replaces the app and reopens it; your settings are kept. Settings also has Check for updates and a switch to turn automatic checks off.
 
 ## Setup and settings
 
@@ -24,7 +24,7 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 1. Connect Claude Code, ChatGPT Codex or both.
 2. Add "Live AI Usage Widget" to your desktop: right-click an empty spot on the desktop, choose Edit Widgets, search for Live AI Usage Widget, pick a size and drag it on. macOS doesn't let apps place widgets themselves. Show me how walks through it, and the step turns green once a widget is placed.
 
-**General.** Open at login, on by default.
+**General.** Version and Check for updates, Check for updates automatically (on by default), Open at login (on by default).
 
 **Accounts.** One line each for Claude Code and ChatGPT Codex, with one button that always says what it will do: Install, Connect, Connected (hover to Disconnect), or Sign in, Update, Finish setup or Try again when something needs attention. No Terminal needed. On first launch, tools that are already installed and signed in connect on their own. Disconnect only hides that account; the tool stays signed in.
 
@@ -89,11 +89,11 @@ Before changing accounts, Disconnect that account. This clears its widget histor
 
 ## Privacy and uninstall
 
-Only percentages, reset times, observation/failure timestamps and a bounded six-hour graph history are retained. The app uses provider-owned login; it never opens credential files, collects conversations, reads browser cookies or sends telemetry. Provider CLIs themselves communicate with their services under their own policies.
+Only percentages, reset times, observation/failure timestamps and a bounded six-hour graph history are retained. The app uses provider-owned login; it never opens credential files, collects conversations, reads browser cookies or sends telemetry. The update check only asks GitHub for the latest release; nothing about you is sent. Provider CLIs themselves communicate with their services under their own policies.
 
 Private collection state is stored under `~/Library/Application Support/BUNDLEID/`. Shared widget state and settings live in the signing team's app-group container. Source, attempt, publication and repaint times are different; see [architecture](docs/ARCHITECTURE.md).
 
-To uninstall: turn off Open at login, choose Quit from the menu bar icon, remove its desktop widget, and move the app to Trash. Optionally remove its own Application Support folder and app-group container after verifying their exact identifiers. Do not delete provider credential stores or uninstall their tools unless you separately want that. No independent LaunchAgent is installed.
+To uninstall: turn off Open at login, choose Quit from the menu bar icon, remove its desktop widget (right-click it, Remove Widget; quitting the app does not remove it), and move the app to Trash. Optionally remove its own Application Support folder and app-group container after verifying their exact identifiers. Do not delete provider credential stores or uninstall their tools unless you separately want that. No independent LaunchAgent is installed.
 
 ## License
 

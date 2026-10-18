@@ -10,12 +10,17 @@ import Combine
     @Published var status = StatusStore.load()
     @Published var busy = false
     @Published var message = ""
+    /// A newer release on GitHub, and what the update is doing right now ("" when idle).
+    @Published var update: Updater.Release?
+    @Published var updateStatus = ""
+    private var lastUpdateCheck = Date.distantPast
     var timer: Timer?
     private var links: AnyCancellable?
     init() {
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            Task { @MainActor in self?.refresh(); self?.checkForUpdates() }
         }
+        DispatchQueue.main.async { [weak self] in self?.checkForUpdates() }
         links = URLRouter.shared.$refresh.sink { [weak self] requested in
             guard requested else { return }
             DispatchQueue.main.async { URLRouter.shared.refresh = false; self?.refresh() }
@@ -40,6 +45,33 @@ import Combine
             WidgetCenter.shared.reloadAllTimelines()
             message = "Saved"
         } catch { message = "Couldn't save settings. Check the color percentages, or reinstall the app." }
+    }
+    static var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
+    /// Checks GitHub at launch and then once a day when automatic checks are on; `manual` checks right away.
+    func checkForUpdates(manual: Bool = false) {
+        guard manual || (settings.autoUpdates && Date().timeIntervalSince(lastUpdateCheck) >= 86400) else { return }
+        guard updateStatus != "Downloading…" else { return }
+        lastUpdateCheck = Date()
+        if manual { updateStatus = "Checking…" }
+        Task {
+            let latest = try? await Updater.latest()
+            if let latest, Updater.isNewer(latest.version, than: Self.version) { update = latest; updateStatus = "" }
+            else if manual { update = nil; updateStatus = latest == nil ? "Couldn't check. Try again later." : "Up to date" }
+        }
+    }
+    /// Downloads and checks the new version, then quits so it can replace this one and reopen.
+    func installUpdate() {
+        guard let update else { return }
+        updateStatus = "Downloading…"
+        Task {
+            do {
+                try await Updater.install(update)
+                NSApp.terminate(nil)
+            } catch {
+                updateStatus = "Couldn't update. Opening the download page instead."
+                NSWorkspace.shared.open(URL(string: "https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest")!)
+            }
+        }
     }
     func installed(_ provider: String) -> Bool { (try? UsageReader.find(provider)) != nil }
     /// The one name used for each account everywhere: menus, buttons, settings, widget and docs.
@@ -248,6 +280,11 @@ struct MenuContent: View {
         openWindow(id: "main")
     }
     var body: some View {
+        if let update = model.update {
+            Button { model.installUpdate() } label: { Label(model.updateStatus == "Downloading…" ? "Updating…" : "Update to version " + update.version, systemImage: "arrow.down.circle.fill") }
+                .disabled(model.updateStatus == "Downloading…")
+            Divider()
+        }
         // One line per account in the settings window's words. Every line has an icon so all text lines up.
         ForEach(["claude", "codex"], id: \.self) { provider in
             let name = WidgetStatus.name(provider)
@@ -409,6 +446,21 @@ struct SettingsView: View {
             } header: { Text("Setup help") }
             }
             Section("General") {
+                HStack {
+                    Text("Version " + UsageModel.version)
+                    Spacer()
+                    if !model.updateStatus.isEmpty { Text(model.updateStatus).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                    Button {
+                        if model.update != nil { model.installUpdate() } else { model.checkForUpdates(manual: true) }
+                    } label: {
+                        Group {
+                            if let update = model.update { Label("Update to " + update.version, systemImage: "arrow.down.circle.fill") }
+                            else { Text("Check for updates") }
+                        }.frame(width: 150)
+                    }
+                    .disabled(model.updateStatus == "Downloading…" || model.updateStatus == "Checking…")
+                }
+                Toggle("Check for updates automatically", isOn: $model.settings.autoUpdates)
                 Toggle("Open at login", isOn: $launchAtLogin).onChange(of: launchAtLogin) { _, on in
                     do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
                     catch { model.message = "Couldn't change Open at login. Check Login Items in System Settings."; launchAtLogin = SMAppService.mainApp.status == .enabled }
@@ -572,7 +624,26 @@ struct WidgetLinks: ViewModifier {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) { signal(SIGPIPE, SIG_IGN) }
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        signal(SIGPIPE, SIG_IGN)
+        guard Mover.shouldOffer() else { return }
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+            let alert = NSAlert()
+            alert.messageText = "Move to Applications?"
+            alert.informativeText = "Live AI Usage Widget works best from your Applications folder. Opened from Downloads, sign-in, Open at login and updates may not work. Any older copy in Applications goes to the Trash."
+            alert.addButton(withTitle: "Move to Applications")
+            alert.addButton(withTitle: "Not Now")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            do { _ = try Mover.moveToApplications(); NSApp.terminate(nil) }
+            catch {
+                let failed = NSAlert()
+                failed.messageText = "Couldn't move the app"
+                failed.informativeText = "Quit it from the menu bar, drag Live AI Usage Widget into Applications in Finder, then open it from there."
+                failed.runModal()
+            }
+        }
+    }
     func application(_ application: NSApplication, open urls: [URL]) { URLRouter.shared.url = urls.first }
     func applicationWillTerminate(_ notification: Notification) { ChildProcess.stopAll() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

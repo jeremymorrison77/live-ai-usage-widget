@@ -15,8 +15,9 @@ struct WidgetSettings: Codable {
     var hiddenSmallMetrics: [String] = []
     var refreshMinutes = 5
     var autoDetected = false
+    var autoUpdates = true
     init() {}
-    enum CodingKeys: String, CodingKey { case enabled, generation, usDates, usageColors, highThreshold, lowThreshold, highColor, middleColor, lowColor, style, hiddenSmallMetrics, refreshMinutes, autoDetected }
+    enum CodingKeys: String, CodingKey { case enabled, generation, usDates, usageColors, highThreshold, lowThreshold, highColor, middleColor, lowColor, style, hiddenSmallMetrics, refreshMinutes, autoDetected, autoUpdates }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = (try c.decodeIfPresent([String].self, forKey: .enabled) ?? []).filter { ["claude", "codex"].contains($0) }
@@ -33,6 +34,7 @@ struct WidgetSettings: Codable {
         hiddenSmallMetrics = try c.decodeIfPresent([String].self, forKey: .hiddenSmallMetrics) ?? []
         refreshMinutes = min(1440, max(1, try c.decodeIfPresent(Int.self, forKey: .refreshMinutes) ?? 5))
         autoDetected = try c.decodeIfPresent(Bool.self, forKey: .autoDetected) ?? false
+        autoUpdates = try c.decodeIfPresent(Bool.self, forKey: .autoUpdates) ?? true
         if !highThreshold.isFinite || !lowThreshold.isFinite || lowThreshold < 0 || highThreshold > 100 || lowThreshold >= highThreshold {
             highThreshold = 30; lowThreshold = 10
         }
