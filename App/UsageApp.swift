@@ -21,17 +21,19 @@ import Combine
             DispatchQueue.main.async { URLRouter.shared.refresh = false; self?.refresh() }
         }
     }
-    func save() {
+    /// `reset` drops those accounts' readings too, for example after signing in again.
+    func save(reset: Set<String> = []) {
         do {
-            let changedAccounts = settings.generation != WidgetSettings.load().generation
+            let previous = WidgetSettings.load()
             try settings.save()
-            // Disabling a provider erases its cached reading and history immediately.
+            // Disabling a provider erases its cached reading and history immediately; accounts that stay on keep theirs.
+            let keep = Set(settings.enabled).subtracting(reset)
+                .intersection(settings.generation == previous.generation ? Set(settings.enabled) : Set(previous.enabled))
             let destination = try StatusStore.fileURL()
             try StatusStore.locked(destination) {
                 var value = StatusStore.load() ?? WidgetStatus()
-                if changedAccounts { value = WidgetStatus() }
-                value.usage = value.usage?.filter { settings.enabled.contains($0.key) }
-                value.usageHistory = value.usageHistory?.filter { settings.enabled.contains(String($0.key.split(separator: ":")[0])) }
+                value.usage = value.usage?.filter { keep.contains($0.key) }
+                value.usageHistory = value.usageHistory?.filter { keep.contains(String($0.key.split(separator: ":")[0])) }
                 try JSONEncoder().encode(value).write(to: destination, options: .atomic)
             }
             status = StatusStore.load()
@@ -43,6 +45,7 @@ import Combine
     func toolName(_ provider: String) -> String { provider == "claude" ? "Claude Code" : "Codex" }
     /// Turns an account on and does whatever is missing: install, browser sign-in, then a fresh reading.
     func connect(_ provider: String) {
+        connecting.insert(provider)
         if !settings.enabled.contains(provider) {
             settings.enabled = ["claude", "codex"].filter { $0 == provider || settings.enabled.contains($0) }
             settings.generation = UUID().uuidString
@@ -52,20 +55,19 @@ import Combine
         Task {
             if !installed(provider) {
                 await installNow(provider)
-                guard installed(provider) else { return }
+                guard installed(provider) else { connecting.remove(provider); return }
             }
             working[provider] = "Checking sign-in…"
             try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
             let signed = await Task.detached { UsageReader.signedIn(provider, directory: probe) }.value
             working[provider] = nil
             signedIn[provider] = signed
-            if signed == true { checkConnection() } else { signIn(provider) }
+            if signed == true { checkConnection([provider]) } else { signIn(provider) }
         }
     }
     /// Only stops showing this account; the official tool stays signed in.
     func disconnect(_ provider: String) {
         settings.enabled.removeAll { $0 == provider }
-        settings.generation = UUID().uuidString
         save()
         message = ""
     }
@@ -79,13 +81,15 @@ import Combine
             try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
             var found: [String] = []
             for provider in ["claude", "codex"] where installed(provider) {
+                connecting.insert(provider)
                 working[provider] = "Checking sign-in…"
                 if await Task.detached(operation: { UsageReader.signedIn(provider, directory: probe) }).value == true { found.append(provider) }
                 working[provider] = nil
             }
+            connecting.subtract(["claude", "codex"].filter { !found.contains($0) })
             guard !found.isEmpty else { return }
             settings.enabled = found
-            checkConnection()
+            checkConnection(found)
         }
     }
     func isConnected(_ provider: String) -> Bool {
@@ -93,6 +97,9 @@ import Combine
     }
     /// Provider → what is happening right now, shown in the Connect window.
     @Published var working: [String: String] = [:]
+    /// Accounts between a Connect click and the reading that follows it.
+    @Published var connecting: Set<String> = []
+    private var refreshAgain = false
     @Published var signInLink: [String: URL] = [:]
     @Published var signedIn: [String: Bool] = [:]
     private var probe: URL {
@@ -139,16 +146,19 @@ import Combine
             }.value
             working[provider] = nil
             signInLink[provider] = nil
-            if failure == "usage_read_timed_out" { message = "Sign-in timed out. Try again."; return }
-            if failure != nil { message = "Sign-in didn't finish. Try again."; return }
-            settings.generation = UUID().uuidString
+            if failure != nil {
+                connecting.remove(provider)
+                message = failure == "usage_read_timed_out" ? "Sign-in timed out. Try again." : "Sign-in didn't finish. Try again."
+                return
+            }
             updateSignedIn(provider)
-            checkConnection()
+            checkConnection([provider], reset: [provider])
         }
     }
-    func checkConnection() {
+    /// Reads usage again for every account, after preparing the ones just connected.
+    func checkConnection(_ providers: [String], reset: Set<String> = []) {
         let probe = self.probe
-        let claude = settings.enabled.contains("claude")
+        let claude = providers.contains("claude") && settings.enabled.contains("claude")
         Task {
             // Claude Code asks once whether to trust the folder it runs in; answer it for the app's own empty folder.
             if claude && (try? UsageReader.find("claude")) != nil {
@@ -159,15 +169,16 @@ import Combine
             }
             // An explicit check starts a new collection generation; timer retries keep their backoff.
             settings.generation = UUID().uuidString
-            save()
+            save(reset: reset)
             refresh()
         }
     }
     func refresh(force: Bool = false) {
-        guard !busy else { return }
+        // A request during a check runs once that check ends, so a new connection is never skipped.
+        guard !busy else { refreshAgain = true; return }
         let settings = self.settings
         // Nothing to check until an account is turned on; stay quiet instead of reporting.
-        guard !settings.enabled.isEmpty else { message = ""; return }
+        guard !settings.enabled.isEmpty else { message = ""; connecting = []; return }
         let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(Bundle.main.bundleIdentifier ?? "LiveAIUsageWidget")
         busy = true
         message = "Checking usage…"
@@ -175,8 +186,12 @@ import Combine
             let payload: Data? = await Task.detached {
                 try? Collector.run(root: root, generation: settings.generation, providers: settings.enabled, interval: Double(settings.refreshMinutes) * 60, force: force)
             }.value
-            defer { busy = false }
-            guard settings.generation == self.settings.generation else { message = "Accounts changed. Checking again shortly."; return }
+            defer {
+                busy = false
+                if refreshAgain { refreshAgain = false; refresh() }
+            }
+            guard settings.generation == self.settings.generation else { refreshAgain = true; return }
+            connecting.subtract(settings.enabled)
             guard let payload else { message = "Couldn't check usage. Make sure the Claude or ChatGPT command-line tool is installed and signed in."; return }
             do {
                 status = try StatusStore.publishUsage(input: payload)
@@ -237,7 +252,7 @@ struct MenuContent: View {
             let name = provider == "claude" ? "Claude" : "ChatGPT"
             let installed = model.installed(provider)
             let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
-            if let busy = model.working[provider] {
+            if let busy = model.working[provider] ?? (model.connecting.contains(provider) ? "Connecting…" : nil) {
                 Button { open() } label: { Label(name + " · " + busy, systemImage: "hourglass") }
             } else if !installed {
                 Button { model.install(provider) } label: { Label(name + " · Not installed · Install " + model.toolName(provider), systemImage: "arrow.down.circle") }
@@ -289,30 +304,35 @@ struct AccountRow: View {
         let name = provider == "claude" ? "Claude" : "ChatGPT"
         let installed = model.installed(provider)
         let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
-        let busy = model.working[provider]
+        let busy = model.working[provider] ?? (model.connecting.contains(provider) ? "Connecting…" : nil)
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(name)
                 Spacer()
-                if busy != nil { ProgressView().controlSize(.small) }
                 Text(installed ? "Installed" : "Not installed").foregroundStyle(.secondary)
                 Button {
                     if !installed { model.install(provider) } else if connected { model.disconnect(provider) } else { model.connect(provider) }
                 } label: {
                     Group {
-                        if !installed { Text(busy != nil ? "Installing…" : "Install " + model.toolName(provider)) }
+                        // The spinner sits inside the button of the account that is working.
+                        if busy != nil {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 14, height: 14)
+                                Text(installed ? "Connecting…" : "Installing…")
+                            }
+                        }
+                        else if !installed { Text("Install " + model.toolName(provider)) }
                         else if connected && hovering { Label("Disconnect", systemImage: "xmark.circle").foregroundStyle(.red) }
                         else if connected { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
-                        else if busy != nil { Text("Connecting…") }
                         else { Label("Connect", systemImage: "person.crop.circle") }
                     }.frame(width: 140)
                 }
                 .disabled(busy != nil)
                 .onHover { hovering = $0 }
             }
-            if let busy {
+            if let detail = model.working[provider] {
                 HStack(spacing: 6) {
-                    Text(busy).font(.caption).foregroundStyle(.secondary)
+                    Text(detail).font(.caption).foregroundStyle(.secondary)
                     if let link = model.signInLink[provider] { Link("Open sign-in page", destination: link).font(.caption) }
                 }
             } else if model.settings.enabled.contains(provider) && !connected, let reason = model.status?.usage?[provider]?.refresh?.failureReason {
