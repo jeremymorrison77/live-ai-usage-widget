@@ -148,10 +148,12 @@ struct UsageStatusView: View {
             let checking = status?.emptied(at: date) == true
             if !checking, status?.usageFailureText() == nil, let retry = status?.pausedUntil(at: date) {
                 // A live countdown to the automatic retry.
-                (Text(compact ? "Too many. Waiting " : "Too many refreshes. Waiting ")
+                (Text(compact ? "Refresh timed out. Waiting " : "Too many refreshes. Waiting ")
                     + Text(timerInterval: date...max(date, retry), countsDown: true).monospacedDigit()
-                    + Text(compact ? "" : " to try again."))
-                    .lineLimit(1).minimumScaleFactor(0.8)
+                    + Text(compact ? "." : " to try again."))
+                    // Slightly smaller on the small widget so the whole line fits.
+                    .font(.system(size: compact ? 8 : 10))
+                    .lineLimit(1).minimumScaleFactor(0.7)
             } else {
             Text(checking ? "Checking…" : status?.usageFailureText() ?? (compact ? "" : "Last refresh ") + WidgetStatus.updateDateLabel(status?.usageObservedAt))
                 .lineLimit(1).minimumScaleFactor(0.8)
