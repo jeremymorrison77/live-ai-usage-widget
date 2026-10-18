@@ -87,7 +87,7 @@ import SwiftUI
                 labeled("Trends · medium", widget("trends", "medium"))
                 labeled("Solar · large", widget("solar", "large"))
             }
-            labeled("Settings", Image(nsImage: settingsImage).clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            labeled("Settings", Image(nsImage: settingsImage).resizable().frame(width: 520 * 0.8, height: settingsHeight * 0.8).clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .shadow(color: .black.opacity(0.12), radius: 8, y: 2))
         }
         .padding(40)
