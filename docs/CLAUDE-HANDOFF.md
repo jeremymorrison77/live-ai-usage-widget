@@ -19,3 +19,13 @@ Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for
 4. Push, wait for CI, then create a GitHub prerelease with the app ZIP, source ZIP and both `.sha256` files. Download them back and verify the checksums. Give the app ZIP the asset label "Download for Mac (Apple Silicon) - Live AI Usage Widget X.Y.Z" and update the README Download for Mac link to the new file name.
 
 Keep commits on the GitHub noreply address. Never add credentials, account screenshots or personal paths.
+
+## Unreleased work since 1.0.1 (10/18/2026)
+
+Built, signed (not notarized) and installed on the owner's Mac for testing; committed locally, not pushed:
+- Accounts rows: name · Installed/Not installed · one button (Install Claude Code / Install Codex → Connect → Connected; hover shows Disconnect, which only hides the account). Connect installs if needed, checks sign-in, opens the browser if not signed in, then checks the connection. The old Connect sheet is gone.
+- First launch auto-detects installed, signed-in tools and connects them (`autoDetected` setting). Open at login is a General toggle, on by default. Get started has two steps (connect accounts, add widget). Window title: Live AI Usage Widget Settings.
+- Menu bar: one line per account with an icon (green check when connected), then Settings, Check now, Quit, all with icons so text aligns. No disconnect in the menu.
+- Fixed: `claude auth status` output in a terminal uses cursor codes; it is now stripped before reading `loggedIn`.
+- Owner reported "a few issues" still to discuss. Builds use `CFBundleVersion` 20; bump the version, notarize and release only when the owner says.
+
