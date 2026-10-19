@@ -1,12 +1,12 @@
 # Maintainer handoff
 
-Current version: **1.2.0 (build 31), Apple Silicon, macOS 14+**, published as a full GitHub release in the public repository. This repository is the whole project; it has no parent workspace.
+Current version: **1.3.0 (build 32), Apple Silicon, macOS 14+**, published as a full GitHub release in the public repository. This repository is the whole project; it has no parent workspace.
 
 ## Current state
 
 - Name: Live AI Usage Widget. Bundle identifier `com.liveaiusagewidget.app`, widget `com.liveaiusagewidget.app.widget`, app group `TEAMID.com.liveaiusagewidget.app`, link scheme `live-ai-usage-widget://`.
 - The app is a menu bar app (no Dock icon): one iconned line per account, then Settings, Check usage now and Quit. It opens one setup window (Setup help steps, hidden once all are done with a Setup help link to show them, accounts, appearance, updates interval, small-widget readings; settings apply as they change (no Save button); Setup help toggle at the bottom once set up). There is no separate preview window. Connecting needs no Terminal: background install, browser sign-in, and automatic trust of the app's own probe folder. Bars (stored as "clean") is the default style; Solar is stored as "solar".
-- Tests, compile-only build, source export and CI pass. 1.2.0 is notarized (submission `b7193822-12f1-4b56-b35a-409e4d89321b`), app ZIP SHA-256 `98c4bdecfc49ba0334dee94e3770f04a8eb074bad4780f1633b0ff0daa06f7bf`.
+- Tests, compile-only build, source export and CI pass. 1.3.0 is notarized (submission `4a277ce8-49b6-43fc-aac0-19ccd9c2636c`), app ZIP SHA-256 `548c2764bfd5fe18dabebc874dfc53e210026badd1c52e075a9524ab747e3f8e`.
 - The README picture `docs/images/overview.png` is drawn by `bash scripts/render_overview.sh` from the app's real views with sample data, then stripped of metadata. `scripts/package.py` refuses PNGs that carry metadata.
 
 Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for what is still untested.
@@ -19,6 +19,10 @@ Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for
 4. Push, wait for CI, then create a GitHub prerelease with the app ZIP, source ZIP and both `.sha256` files. Download them back and verify the checksums. Give the app ZIP the asset label "Download for Mac (Apple Silicon) - Live AI Usage Widget X.Y.Z" and update the README Download for Mac link to the new file name.
 
 Keep commits on the GitHub noreply address. Never add credentials, account screenshots or personal paths.
+
+## 1.3.0 (10/19/2026)
+
+Clean is shown as "Bars" (still stored as `clean`). `WidgetSettings.showUsed[style]` / `showsUsed()`: per-style used-vs-left, default left for Bars and used for Solar; colors always follow what is left. `WidgetPaper` is the same for both styles. Rows use `.frame(maxHeight:)` capped at 55 (medium) / 80 (large) so they share height evenly but stay at the top when few; medium pads the shorter column with blank rows so rows line up. Medium rings are 20 pt. Live check method: widgets dragged onto a test Mac desktop (`lab rclick`/`drag`, Edit Widgets), settings.json edited with the app quit, then the app reopened. Avoid osascript in test Macs: it raises an Automation prompt that blocks.
 
 ## 1.2.0 (10/19/2026)
 

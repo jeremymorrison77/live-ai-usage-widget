@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.3.0 (build 32) — 10/19/2026
+
+All three widget sizes placed on a fresh test Mac's desktop and checked live in every combination: Bars and Solar, Show amount used off and on, both accounts, Claude Code only, ChatGPT Codex only, plus the small widget with two readings chosen. Numbers and fills switch between left and used, rings fill clockwise, both styles share one background, rows spread evenly and stay at the top when few. Release ZIP as a real download: moved itself and connected both accounts by itself. A 1.2.0 install recorded "1.3.0 available" for the widget's status line, updated in about 1 second, and the notice cleared. Published files downloaded back and checksums matched. Notarization Accepted (submission 4a277ce8-49b6-43fc-aac0-19ccd9c2636c; app ZIP SHA-256 548c2764bfd5fe18dabebc874dfc53e210026badd1c52e075a9524ab747e3f8e).
+
 ## 1.2.0 (build 31) — 10/19/2026
 
 Release ZIP as a real download on a fresh macOS 15.7.7 test Mac with both tools signed in: moved itself, connected both by itself, US dates on by default, no update notice (latest was 1.1.9). In-app update from 1.1.9: about 1 second, both still connected, no notice left behind. Widget "Version X available" status line checked only in a drawn sample (all sizes, both styles); it first shows for real when a newer version than 1.2.0 is published. Published files downloaded back and checksums matched. Notarization Accepted (submission b7193822-12f1-4b56-b35a-409e4d89321b; app ZIP SHA-256 98c4bdecfc49ba0334dee94e3770f04a8eb074bad4780f1633b0ff0daa06f7bf).
