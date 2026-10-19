@@ -116,7 +116,7 @@ struct UsageStatusView: View {
                     // clicked reading shows when it resets for a few seconds instead.
                     Group {
                         if reveal == key, compact, let reset = window.resetText(at: date) {
-                            Text(reset).foregroundStyle(.secondary).lineLimit(1)
+                            Text(reset.prefix(1).uppercased() + reset.dropFirst()).foregroundStyle(.secondary).lineLimit(1)
                         } else {
                             HStack(alignment: .firstTextBaseline, spacing: 0) {
                                 Text(WidgetStatus.name(agent))
