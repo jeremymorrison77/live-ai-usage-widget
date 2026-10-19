@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+
+On the small widget, click a reading to see when it resets ("Resets Sat 10:27 PM") for about four seconds; click it again to go back sooner. Names now share one size in each widget, with 5h, week and Fable smaller after them; the widget measures its own width so the longest name always fits.
+
 ## 1.3.0
 
 Clean is now called Bars. New Show amount used switch under Style: off shows what is left, on shows what is used, remembered per style. Bars start on what is left; Solar starts on what is used, with rings that fill clockwise like the rings in the Claude and ChatGPT apps. Solar now uses the same background and colors as Bars. Colors still follow what is left, so a nearly used-up limit turns red either way. Readings are spaced evenly to fill the medium widget, and on every size the spacing adjusts to how many readings are shown; with only a few they stay at the top. The widget gallery description now reads "How much of your Claude Code and ChatGPT Codex limits is left or used."

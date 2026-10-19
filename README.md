@@ -2,13 +2,13 @@
 
 A macOS desktop widget that shows how much of your Claude Code and ChatGPT Codex usage limits are left, or how much you have used. Small, medium and large widgets come in two styles: Bars (default), which shows what is left, and Solar, rings that fill clockwise as you use your limits. Accounts and data stay on your own Mac.
 
-**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.3.0-macOS-arm64.zip)** · version 1.3.0 · macOS 14 or later · M1 or newer
+**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.3.1-macOS-arm64.zip)** · version 1.3.1 · macOS 14 or later · M1 or newer
 
 <p align="center"><img src="docs/images/overview.png" alt="Settings window and the widget in all sizes and styles" width="100%"></p>
 
 Pictures are drawn from the app's own views with made-up sample readings, not a real account.
 
-**Version 1.3.0.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
+**Version 1.3.1.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
 
 ## Download and install
 
@@ -34,7 +34,7 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 
 **Troubleshooting.** Save report… writes a plain-text report you can send to the developer: app and tool versions, where the app runs from, whether each tool is signed in, recent checks and the past three days of activity. It never includes account names, emails, passwords or sign-in codes. The activity log lives in ~/Library/Logs/Live AI Usage Widget, keeps three days and stays under 256 KB; nothing is sent automatically.
 
-**Small widget readings.** Choose which readings the small widget shows (up to five). Medium and large show every reading. A limit your plan doesn't have stays listed, grayed out, as "Not included in your plan" (for example, ChatGPT Pro has no 5-hour limit, and only Claude Max and Premium seats have a weekly Fable limit).
+**Small widget readings.** Choose which readings the small widget shows (up to five). On the small widget, click a reading to see when it resets; it goes back after a few seconds, or click it again. Medium and large show every reading. A limit your plan doesn't have stays listed, grayed out, as "Not included in your plan" (for example, ChatGPT Pro has no 5-hour limit, and only Claude Max and Premium seats have a weekly Fable limit).
 
 The settings window can be resized and remembers its size.
 

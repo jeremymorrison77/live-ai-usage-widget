@@ -34,8 +34,8 @@ def main():
     for folder, executable, bundle, kind in [(app, 'UsageWidget', args.bundle_id, 'APPL'),
                                             (extension, 'UsageWidgetExtension', args.bundle_id + '.widget', 'XPC!')]:
         info = dict(CFBundleDisplayName='Live AI Usage Widget', CFBundleName='Live AI Usage Widget', CFBundleExecutable=executable,
-                    CFBundleIdentifier=bundle, CFBundlePackageType=kind, CFBundleVersion='32',
-                    CFBundleShortVersionString='1.3.0', LSMinimumSystemVersion='14.0', UsageAppGroup=group)
+                    CFBundleIdentifier=bundle, CFBundlePackageType=kind, CFBundleVersion='33',
+                    CFBundleShortVersionString='1.3.1', LSMinimumSystemVersion='14.0', UsageAppGroup=group)
         if kind == 'XPC!':
             info['NSExtension'] = {'NSExtensionPointIdentifier': 'com.apple.widgetkit-extension'}
         else:
