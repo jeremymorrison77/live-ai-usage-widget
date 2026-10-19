@@ -1,14 +1,14 @@
 # Live AI Usage Widget
 
-A macOS desktop widget that shows how much of your Claude Code and ChatGPT Codex usage limits are left. Small, medium and large widgets come in Clean (default) and Solar styles. Accounts and data stay on your own Mac.
+A macOS desktop widget that shows how much of your Claude Code and ChatGPT Codex usage limits are left, or how much you have used. Small, medium and large widgets come in two styles: Bars (default), which shows what is left, and Solar, rings that fill clockwise as you use your limits. Accounts and data stay on your own Mac.
 
-**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.2.0-macOS-arm64.zip)** · version 1.2.0 · macOS 14 or later · M1 or newer
+**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.3.0-macOS-arm64.zip)** · version 1.3.0 · macOS 14 or later · M1 or newer
 
 <p align="center"><img src="docs/images/overview.png" alt="Settings window and the widget in all sizes and styles" width="100%"></p>
 
 Pictures are drawn from the app's own views with made-up sample readings, not a real account.
 
-**Version 1.2.0.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
+**Version 1.3.0.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
 
 ## Download and install
 
@@ -16,7 +16,7 @@ Pictures are drawn from the app's own views with made-up sample readings, not a 
 2. Double-click the ZIP to unzip it and drag **Live AI Usage Widget** into Applications.
 3. Open it from Applications. If you open it from Downloads instead, it offers to move itself into Applications. The setup window appears; follow its Setup help steps.
 
-The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): one line per account (Claude Code, ChatGPT Codex), then Settings, Check usage now and Quit. Updates: the app checks GitHub once a day and the menu shows "Update to version X" when one is out. One click downloads it, checks it is Apple-approved and from the same developer, replaces the app and reopens it; your settings are kept. Settings also has Check for updates and a switch to turn automatic checks off.
+The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): one line per account (Claude Code, ChatGPT Codex), then Settings, Check usage now and Quit. Updates: the app checks GitHub once a day and the menu shows "Update to version X" when one is out. One click downloads it, checks it is Apple-approved and from the same developer, replaces the app and reopens it; your settings are kept. With automatic checks on, the widget's status line also says "Version X available"; tapping it opens Settings. Settings also has Check for Updates and a switch to turn automatic checks off.
 
 ## Setup and settings
 
@@ -26,9 +26,9 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 
 **General.** Version and Check for updates, Check for updates automatically (on by default), Open at login (on by default).
 
-**Accounts.** One line each for Claude Code and ChatGPT Codex, with one button that always says what it will do: Install, Connect, Connected (hover to Disconnect), or Sign in, Update, Finish setup or Try again when something needs attention. No Terminal needed. On first launch, tools that are already installed and signed in connect on their own. Disconnect only hides that account; the tool stays signed in.
+**Accounts.** One line each for Claude Code and ChatGPT Codex: its state (Connected, Connecting…, Not installed, or what went wrong) and one button for the next step: Install, Connect, Disconnect, or Sign In, Update, Finish Setup or Try Again when something needs attention. No Terminal needed. On first launch, tools that are already installed and signed in connect on their own. Disconnect only hides that account; the tool stays signed in.
 
-**Appearance.** Style: Clean (default) or Solar. Date format: US or European. Usage colors on or off, with three color bands you can recolor and re-threshold (30% or more remaining, 11–29%, 10% or less by default).
+**Appearance.** Style: Bars (default) or Solar. Both use the same background and colors; only the way readings are drawn differs. Show amount used: off shows what is left, on shows what is used; each style remembers its own choice (Bars starts off, Solar starts on). Date format: US (default) or European. Usage colors on or off, with three color bands you can recolor and re-threshold (30% or more remaining, 11–29%, 10% or less by default).
 
 **Updates.** Check every N minutes: 5 by default, any value from 1 to 1,440. After a failed check the app waits at least 15 minutes before trying again. Check usage now in the menu bar, or the refresh button on the widget, checks immediately.
 
@@ -42,7 +42,7 @@ Changes apply as you make them; there is no Save button. You can close the windo
 
 ## What it shows
 
-- Remaining percentage for each limit your plan exposes: Claude Code's five-hour, weekly and any model-specific weekly windows; ChatGPT Codex five-hour and weekly. ChatGPT Codex here means Codex coding allowances, not other ChatGPT products or API billing.
+- The percentage left (or used) for each limit your plan exposes: Claude Code's five-hour, weekly and any model-specific weekly windows; ChatGPT Codex five-hour and weekly. ChatGPT Codex here means Codex coding allowances, not other ChatGPT products or API billing.
 - When each limit resets, and when it was last updated. Readings fade as they age and failures show their date. A newly connected account appears right away with Loading… until its first reading arrives.
 
 ## Requirements
@@ -55,7 +55,7 @@ No provider tools, credentials or private signing material are included.
 
 ## Known limits
 
-Tested on two Apple Silicon Macs with real Claude Code and ChatGPT Codex accounts. Not yet tested: installing as a brand-new macOS user, reboots and sleep over several days, sign-ins renewing on their own over time, and revoked sign-ins. See [release checks](docs/RELEASE-CHECKLIST.md).
+Tested on two Apple Silicon Macs with real Claude Code and ChatGPT Codex accounts, and on fresh macOS 15 test Macs with neither tool, either one, and both. Not yet tested: reboots and sleep over several days, sign-ins renewing on their own over time, and revoked sign-ins. See [release checks](docs/RELEASE-CHECKLIST.md).
 
 ## Build and test
 

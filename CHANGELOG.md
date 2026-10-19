@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+
+Clean is now called Bars. New Show amount used switch under Style: off shows what is left, on shows what is used, remembered per style. Bars start on what is left; Solar starts on what is used, with rings that fill clockwise like the rings in the Claude and ChatGPT apps. Solar now uses the same background and colors as Bars. Colors still follow what is left, so a nearly used-up limit turns red either way. Readings are spaced evenly to fill the medium widget, and on every size the spacing adjusts to how many readings are shown; with only a few they stay at the top. The widget gallery description now reads "How much of your Claude Code and ChatGPT Codex limits is left or used."
+
 ## 1.2.0
 
 US dates (10/19 2:00 AM) are the default for new installs; European dates stay available in Settings, and an existing choice is kept. With Check for updates automatically on, the widget's status line says when a new version is available (for example "Version 1.2.1 available"); tapping it opens Settings. The README picture shows each style in its own column: Clean on the left, Solar in the middle.

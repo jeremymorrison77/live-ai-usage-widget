@@ -61,7 +61,7 @@ import SwiftUI
         model.timer?.invalidate()
         model.settings = settings
         model.status = status
-        let settingsHeight: CGFloat = 1330
+        let settingsHeight: CGFloat = 1400
         let host = NSHostingView(rootView: SettingsView(model: model).frame(width: 520, height: settingsHeight))
         host.frame = NSRect(x: 0, y: 0, width: 520, height: settingsHeight)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -74,11 +74,11 @@ import SwiftUI
 
         let page = HStack(alignment: .top, spacing: 36) {
             // One column per style: small, medium, large.
-            ForEach(["Clean", "Solar"], id: \.self) { style in
+            ForEach([("Bars", "clean"), ("Solar", "solar")], id: \.1) { name, style in
                 VStack(alignment: .leading, spacing: 30) {
-                    labeled(style + " · small", widget(style.lowercased(), "small"))
-                    labeled(style + " · medium", widget(style.lowercased(), "medium"))
-                    labeled(style + " · large", widget(style.lowercased(), "large"))
+                    labeled(name + " · small", widget(style, "small"))
+                    labeled(name + " · medium", widget(style, "medium"))
+                    labeled(name + " · large", widget(style, "large"))
                 }.frame(width: 360, alignment: .leading)
             }
             labeled("Settings", Image(nsImage: settingsImage).resizable().frame(width: 520 * 0.8, height: settingsHeight * 0.8).clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))

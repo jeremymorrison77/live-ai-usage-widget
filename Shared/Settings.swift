@@ -18,8 +18,11 @@ struct WidgetSettings: Codable, Equatable {
     var autoUpdates = true
     /// A newer version the app found on GitHub; the widget mentions it while automatic checks are on.
     var availableUpdate: String? = nil
+    /// Per style: true shows how much is used, false what is left. Bars ("clean") default to left, Solar rings to used.
+    var showUsed: [String: Bool] = [:]
+    func showsUsed(_ style: String? = nil) -> Bool { showUsed[style ?? self.style] ?? ((style ?? self.style) == "solar") }
     init() {}
-    enum CodingKeys: String, CodingKey { case enabled, generation, usDates, usageColors, highThreshold, lowThreshold, highColor, middleColor, lowColor, style, hiddenSmallMetrics, refreshMinutes, autoDetected, autoUpdates, availableUpdate }
+    enum CodingKeys: String, CodingKey { case enabled, generation, usDates, usageColors, highThreshold, lowThreshold, highColor, middleColor, lowColor, style, hiddenSmallMetrics, refreshMinutes, autoDetected, autoUpdates, availableUpdate, showUsed }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = (try c.decodeIfPresent([String].self, forKey: .enabled) ?? []).filter { ["claude", "codex"].contains($0) }
@@ -32,13 +35,14 @@ struct WidgetSettings: Codable, Equatable {
         middleColor = try c.decodeIfPresent(String.self, forKey: .middleColor) ?? "#E99A38"
         lowColor = try c.decodeIfPresent(String.self, forKey: .lowColor) ?? "#D65B64"
         style = try c.decodeIfPresent(String.self, forKey: .style) ?? "clean"
-        // Trends was removed in 1.1.4; anyone who chose it gets Clean.
+        // Trends was removed in 1.1.4; anyone who chose it gets Bars.
         if !["clean", "solar"].contains(style) { style = "clean" }
         hiddenSmallMetrics = try c.decodeIfPresent([String].self, forKey: .hiddenSmallMetrics) ?? []
         refreshMinutes = min(1440, max(1, try c.decodeIfPresent(Int.self, forKey: .refreshMinutes) ?? 5))
         autoDetected = try c.decodeIfPresent(Bool.self, forKey: .autoDetected) ?? false
         autoUpdates = try c.decodeIfPresent(Bool.self, forKey: .autoUpdates) ?? true
         availableUpdate = try c.decodeIfPresent(String.self, forKey: .availableUpdate)
+        showUsed = try c.decodeIfPresent([String: Bool].self, forKey: .showUsed) ?? [:]
         if !highThreshold.isFinite || !lowThreshold.isFinite || lowThreshold < 0 || highThreshold > 100 || lowThreshold >= highThreshold {
             highThreshold = 30; lowThreshold = 10
         }

@@ -675,7 +675,12 @@ struct SettingsView: View {
             }
             Section("Appearance") {
                 Picker("Style", selection: $model.settings.style) {
-                    Text("Clean").tag("clean"); Text("Solar").tag("solar")
+                    Text("Bars").tag("clean"); Text("Solar").tag("solar")
+                }
+                // Remembered per style: Bars start on what's left, Solar rings on what's used.
+                Toggle(isOn: Binding(get: { model.settings.showsUsed() }, set: { model.settings.showUsed[model.settings.style] = $0 })) {
+                    Text("Show amount used")
+                    Text("Off shows what's left")
                 }
                 Picker("Date format", selection: $model.settings.usDates) { Text("US").tag(true); Text("European").tag(false) }
                 Toggle("Usage colors", isOn: $model.settings.usageColors)

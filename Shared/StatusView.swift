@@ -53,12 +53,17 @@ struct UsageStatusView: View {
                 Text("Connect an account in Settings").font(.system(size: 11)).foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             } else if !compact && !large {
+                // Rows share the height evenly; both columns use the longer column's row count, so rows line up across.
+                let most = agents.map { shown($0).count }.max() ?? 0
                 HStack(alignment: .top, spacing: 16) {
                     ForEach(agents, id: \.self) { agent in
-                        VStack(alignment: .leading, spacing: 4) { rows(agent) }
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 4) {
+                            rows(agent)
+                            ForEach(0..<(most - shown(agent).count), id: \.self) { _ in Color.clear.frame(maxHeight: 55) }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
-                }
+                }.frame(maxHeight: .infinity)
             } else {
                 VStack(alignment: .leading, spacing: large ? 6 : 2) {
                     ForEach(agents, id: \.self) { agent in rows(agent) }
@@ -82,7 +87,9 @@ struct UsageStatusView: View {
             let since = status?.checkingSince ?? date
             let phase: Phase = status?.checking(at: date) == true ? (date.timeIntervalSince(since) < 0.9 ? .fading : .empty) : .shown
             let checking = phase != .shown
-            let left = waiting ? 0 : phase == .fading ? window.leftPercent : phase == .empty ? 0 : window.leftPercent
+            // What the bar, ring and number show: what's left, or what's used. Colors always follow what's left.
+            let value = settings.showsUsed() ? window.usedPercent : window.leftPercent
+            let left = waiting || phase == .empty ? 0 : value
             let visible = phase == .shown ? 1.0 : 0.0
             // Widgets allow up to two seconds of animation; growth uses all of it, slowing to a stop. Only growth moves.
             let grow: Animation? = phase == .shown ? .easeOut(duration: 2) : nil
@@ -96,15 +103,16 @@ struct UsageStatusView: View {
                             .rotationEffect(.degrees(-90))
                             .animation(grow, value: left)
                             .opacity(visible).animation(fade, value: visible)
-                    }.frame(width: compact ? (roomy ? 19 : 14) : 24, height: compact ? (roomy ? 19 : 14) : 24)
+                    }.frame(width: compact ? (roomy ? 19 : 14) : large ? 24 : 20, height: compact ? (roomy ? 19 : 14) : large ? 24 : 20)
                 }
                 VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 3) {
                     Text(WidgetStatus.name(agent) + " · " + shortName(window.window))
-                        .foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.75)
+                        .foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(compact ? 0.6 : 0.7)
                     Spacer(minLength: 1)
-                    Text(waiting || checking ? "…" : "\(Int(window.leftPercent.rounded()))%")
+                    Text(waiting || checking ? "…" : "\(Int(value.rounded()))%")
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
+                        .accessibilityLabel("\(Int(value.rounded()))% " + (settings.showsUsed() ? "used" : "left"))
                         .contentTransition(.numericText(value: left)).animation(grow ?? fade, value: left)
                 }.font(.system(size: large ? 13 : compact ? 10 : 11))
                 if settings.style == "clean" {
@@ -126,7 +134,8 @@ struct UsageStatusView: View {
             }
             }
             .opacity(stale ? 0.55 : 1)
-            .frame(maxHeight: compact || large ? .infinity : nil)
+            // Rows share the height evenly, up to a comfortable spacing; with only a few readings they stay at the top.
+            .frame(maxHeight: compact ? .infinity : large ? 80 : 55)
             .accessibilityElement(children: .combine)
         }
     }
@@ -202,9 +211,8 @@ struct RefreshButton: View {
 
 struct WidgetPaper: View {
     var style: String
-    @Environment(\.colorScheme) private var scheme
     var body: some View {
-        if style == "solar" { (scheme == .dark ? Color(red: 0.157, green: 0.141, blue: 0.122) : Color(red: 1, green: 0.976, blue: 0.933)) }
-        else { Color(nsColor: .windowBackgroundColor) }
+        // Both styles share one background and palette; only the way readings are drawn differs.
+        Color(nsColor: .windowBackgroundColor)
     }
 }
