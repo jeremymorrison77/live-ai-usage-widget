@@ -13,10 +13,24 @@ struct CheckUsageIntent: AppIntent {
     }
 }
 
+/// Clicking a reading on the small widget shows its reset time for a few seconds.
+struct ShowResetIntent: AppIntent {
+    static var title: LocalizedStringResource = "Show when a limit resets"
+    static var isDiscoverable = false
+    @Parameter(title: "Reading") var key: String
+    init() {}
+    init(key: String) { self.key = key }
+    func perform() async throws -> some IntentResult {
+        try? StatusStore.reveal(key)
+        return .result()
+    }
+}
+
 struct StatusEntry: TimelineEntry {
     let date: Date
     let status: WidgetStatus?
     var sample = false
+    var reveal: String? = nil
 }
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> StatusEntry { StatusEntry(date: Date(), status: .preview, sample: true) }
@@ -33,7 +47,14 @@ struct Provider: TimelineProvider {
         }
         // While a requested check runs, one entry a second turns the spinner. Mac draws every entry before showing
         // the first, so only a few seconds are planned at a time; the widget asks again when they run out.
-        if let since = status?.checkingSince, status?.checking(at: now) == true {
+        // A clicked reading shows its reset time, then the widget goes back to normal. Only two entries: Mac draws
+        // every planned entry before showing the first, so a long plan here delays the click by seconds.
+        if let reveal = StatusStore.reveal(at: now) {
+            completion(Timeline(entries: [StatusEntry(date: now, status: status, reveal: reveal.key), StatusEntry(date: reveal.until, status: status)],
+                                policy: .after(reveal.until)))
+            return
+        }
+        if status?.checking(at: now) == true {
             let ticks = (1...3).map { StatusEntry(date: now.addingTimeInterval(Double($0)), status: status) }
             completion(Timeline(entries: [StatusEntry(date: now, status: status)] + ticks, policy: .after(now.addingTimeInterval(3))))
             return
@@ -51,13 +72,13 @@ struct WidgetView: View {
         return value
     }
     var body: some View {
-        StatusView(status: entry.status, date: entry.date, compact: family == .systemSmall, large: family == .systemLarge, settings: settings)
+        StatusView(status: entry.status, date: entry.date, compact: family == .systemSmall, large: family == .systemLarge, settings: settings, reveal: entry.reveal)
             .containerBackground(for: .widget) { WidgetPaper(style: WidgetSettings.load().style) }
     }
 }
 @main
 struct UsageWidget: Widget {
-    init() { RefreshButton.intent = CheckUsageIntent() }
+    init() { RefreshButton.intent = CheckUsageIntent(); RevealButton<EmptyView>.intent = { ShowResetIntent(key: $0) } }
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: StatusStore.kind, provider: Provider()) { WidgetView(entry: $0) }
             .configurationDisplayName("Live AI Usage Widget")

@@ -365,6 +365,18 @@ enum StatusStore {
         else { return nil }
         return try? JSONDecoder().decode(WidgetStatus.self, from: data)
     }
+    /// A reading clicked on the small widget shows its reset time for a few seconds: which one, and until when.
+    static var revealURL: URL? { try? fileURL().deletingLastPathComponent().appendingPathComponent("reveal.json") }
+    static func reveal(_ key: String, for seconds: TimeInterval = 4) throws {
+        guard let url = revealURL else { return }
+        try JSONEncoder().encode(Reveal(key: key, until: Date().addingTimeInterval(seconds))).write(to: url, options: .atomic)
+    }
+    static func reveal(at date: Date) -> Reveal? {
+        guard let url = revealURL, let data = try? Data(contentsOf: url), let value = try? JSONDecoder().decode(Reveal.self, from: data),
+              value.until > date else { return nil }
+        return value
+    }
+    struct Reveal: Codable { let key: String; let until: Date }
     /// The widget's request for a check, picked up by the app as soon as it is written.
     static var checkRequestURL: URL? { try? fileURL().deletingLastPathComponent().appendingPathComponent("check-request") }
     static func requestCheck() throws {

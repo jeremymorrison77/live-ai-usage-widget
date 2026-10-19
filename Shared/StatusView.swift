@@ -11,9 +11,11 @@ struct StatusView: View {
     var compact = false
     var large = false
     var settings = WidgetSettings.load()
+    /// The small-widget reading clicked a moment ago, which shows its reset time instead of its name.
+    var reveal: String? = nil
 
     var body: some View {
-        UsageStatusView(status: status, date: date, compact: compact, large: large, settings: settings)
+        UsageStatusView(status: status, date: date, compact: compact, large: large, settings: settings, reveal: reveal)
     }
 
 }
@@ -25,6 +27,7 @@ struct UsageStatusView: View {
     let compact: Bool
     let large: Bool
     let settings: WidgetSettings
+    var reveal: String? = nil
 
     /// Every connected account shows at once; one without a reading yet shows empty "Loading…" rows.
     private var agents: [String] {
@@ -94,7 +97,9 @@ struct UsageStatusView: View {
             // Widgets allow up to two seconds of animation; growth uses all of it, slowing to a stop. Only growth moves.
             let grow: Animation? = phase == .shown ? .easeOut(duration: 2) : nil
             let fade = Animation.easeOut(duration: 0.25)
-            HStack(spacing: compact ? 5 : 8) {
+            let key = UsageHistory.key(agent, window.window)
+            RevealButton(key: compact && !waiting ? key : nil) {
+            HStack(spacing: compact ? 4 : solar && !large ? 6 : 8) {
                 if settings.style == "solar" {
                     ZStack {
                         Circle().stroke(color.opacity(0.15), lineWidth: compact ? 2 : 3)
@@ -106,15 +111,27 @@ struct UsageStatusView: View {
                     }.frame(width: compact ? (roomy ? 19 : 14) : large ? 24 : 20, height: compact ? (roomy ? 19 : 14) : large ? 24 : 20)
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 3) {
-                    Text(WidgetStatus.name(agent) + " · " + shortName(window.window))
-                        .foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(compact ? 0.6 : 0.7)
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    // Every name at one size, the limit after it smaller, so rows match. On the small widget a
+                    // clicked reading shows when it resets for a few seconds instead.
+                    Group {
+                        if reveal == key, compact, let reset = window.resetText(at: date) {
+                            Text(reset).foregroundStyle(.secondary).lineLimit(1)
+                        } else {
+                            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                                Text(WidgetStatus.name(agent))
+                                Text(" · " + shortName(window.window)).font(.system(size: labelSize))
+                            }.foregroundStyle(.primary).lineLimit(1)
+                        }
+                    }
+                    // Swap at once, with no fade, so a click shows the reset time as soon as macOS redraws.
+                    .transition(.identity).transaction { $0.animation = nil; $0.disablesAnimations = true }
                     Spacer(minLength: 1)
                     Text(waiting || checking ? "…" : "\(Int(value.rounded()))%")
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
                         .accessibilityLabel("\(Int(value.rounded()))% " + (settings.showsUsed() ? "used" : "left"))
                         .contentTransition(.numericText(value: left)).animation(grow ?? fade, value: left)
-                }.font(.system(size: large ? 13 : compact ? 10 : 11))
+                }.font(.system(size: nameSize))
                 if settings.style == "clean" {
                     // The fill is revealed by a mask that stretches from the left: a scale, which widgets animate.
                     ZStack(alignment: .leading) {
@@ -133,12 +150,18 @@ struct UsageStatusView: View {
                 }
             }
             }
+            }
             .opacity(stale ? 0.55 : 1)
             // Rows share the height evenly, up to a comfortable spacing; with only a few readings they stay at the top.
             .frame(maxHeight: compact ? .infinity : large ? 80 : 55)
             .accessibilityElement(children: .combine)
         }
     }
+
+    /// One name size per widget, chosen so the longest name ("ChatGPT Codex · week") fits beside its ring or number.
+    private var solar: Bool { settings.style == "solar" }
+    private var nameSize: CGFloat { large ? 13 : compact ? (solar ? 8 : 9.5) : (solar ? 9.5 : 11) }
+    private var labelSize: CGFloat { large ? 11 : compact ? (solar ? 6.5 : 7.5) : (solar ? 7.5 : 9) }
 
     private func shortName(_ name: String) -> String {
         switch name {
@@ -194,6 +217,24 @@ struct UsageStatusView: View {
 }
 
 private enum Phase { case fading, empty, shown }
+
+/// In the small widget, a reading is a button that shows its reset time; elsewhere it is just the reading.
+struct RevealButton<Content: View>: View {
+    let key: String?
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        if let key, let intent = RevealButton<EmptyView>.intent?(key) {
+            Button(intent: intent) { content().contentShape(Rectangle()) }.buttonStyle(.plain)
+        } else {
+            content()
+        }
+    }
+    /// Set by the widget so the shared view can use its intent without the app knowing about it.
+    nonisolated(unsafe) static var intent: ((String) -> any AppIntent)? {
+        get { RevealIntentFactory.make } set { RevealIntentFactory.make = newValue }
+    }
+}
+private enum RevealIntentFactory { nonisolated(unsafe) static var make: ((String) -> any AppIntent)? }
 
 /// In the widget a button that checks at once; elsewhere (pictures, gallery) the same arrow as a link.
 struct RefreshButton: View {
