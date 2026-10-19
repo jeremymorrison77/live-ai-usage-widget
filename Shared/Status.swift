@@ -375,9 +375,13 @@ enum StatusStore {
         try JSONEncoder().encode(Reveal(key: key, until: until)).write(to: url, options: .atomic)
     }
     static func reveal(at date: Date) -> Reveal? {
-        guard let url = revealURL, let data = try? Data(contentsOf: url), let value = try? JSONDecoder().decode(Reveal.self, from: data),
-              value.until > date else { return nil }
+        guard let value = lastReveal(), value.until > date else { return nil }
         return value
+    }
+    /// The last click, whether or not its reset time is still showing.
+    static func lastReveal() -> Reveal? {
+        guard let url = revealURL, let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(Reveal.self, from: data)
     }
     struct Reveal: Codable { let key: String; let until: Date }
     /// The widget's request for a check, picked up by the app as soon as it is written.

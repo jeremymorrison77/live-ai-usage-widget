@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import WidgetKit
 import AppIntents
 
@@ -15,7 +16,10 @@ struct StatusView: View {
     var reveal: String? = nil
 
     var body: some View {
-        UsageStatusView(status: status, date: date, compact: compact, large: large, settings: settings, reveal: reveal)
+        // The widget's own width decides one name size that fits the longest name, so every row matches.
+        GeometryReader { geometry in
+            UsageStatusView(status: status, date: date, compact: compact, large: large, settings: settings, reveal: reveal, width: geometry.size.width)
+        }
     }
 
 }
@@ -28,6 +32,7 @@ struct UsageStatusView: View {
     let large: Bool
     let settings: WidgetSettings
     var reveal: String? = nil
+    var width: CGFloat = 0
 
     /// Every connected account shows at once; one without a reading yet shows empty "Loading…" rows.
     private var agents: [String] {
@@ -99,7 +104,7 @@ struct UsageStatusView: View {
             let fade = Animation.easeOut(duration: 0.25)
             let key = UsageHistory.key(agent, window.window)
             RevealButton(key: compact && !waiting ? key : nil) {
-            HStack(spacing: compact ? 4 : solar && !large ? 6 : 8) {
+            HStack(spacing: ringGap) {
                 if settings.style == "solar" {
                     ZStack {
                         Circle().stroke(color.opacity(0.15), lineWidth: compact ? 2 : 3)
@@ -108,7 +113,7 @@ struct UsageStatusView: View {
                             .rotationEffect(.degrees(-90))
                             .animation(grow, value: left)
                             .opacity(visible).animation(fade, value: visible)
-                    }.frame(width: compact ? (roomy ? 19 : 14) : large ? 24 : 20, height: compact ? (roomy ? 19 : 14) : large ? 24 : 20)
+                    }.frame(width: ringSize, height: ringSize)
                 }
                 VStack(alignment: .leading, spacing: 1) {
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
@@ -160,8 +165,23 @@ struct UsageStatusView: View {
 
     /// One name size per widget, chosen so the longest name ("ChatGPT Codex · week") fits beside its ring or number.
     private var solar: Bool { settings.style == "solar" }
-    private var nameSize: CGFloat { large ? 13 : compact ? (solar ? 8 : 9.5) : (solar ? 9.5 : 11) }
-    private var labelSize: CGFloat { large ? 11 : compact ? (solar ? 6.5 : 7.5) : (solar ? 7.5 : 9) }
+    private var baseName: CGFloat { large ? 13 : compact ? (solar ? 9 : 10) : (solar ? 10 : 11) }
+    private var baseLabel: CGFloat { large ? 11 : compact ? (solar ? 7.5 : 8) : (solar ? 8 : 9) }
+    private var nameSize: CGFloat { (baseName * fit * 2).rounded(.down) / 2 }
+    private var labelSize: CGFloat { (baseLabel * fit * 2).rounded(.down) / 2 }
+    private var ringSize: CGFloat { compact ? (roomy ? 19 : 14) : large ? 24 : 20 }
+    private var ringGap: CGFloat { compact ? 4 : solar && !large ? 6 : 8 }
+    /// How much the names must shrink so the widest row fits its column (1 when everything fits).
+    private var fit: CGFloat {
+        guard width > 0 else { return 1 }
+        let column = !compact && !large && agents.count > 1 ? (width - 16) / 2 : width
+        func measure(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight = .regular) -> CGFloat {
+            (text as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: weight)]).width
+        }
+        let names = agents.flatMap { agent in shown(agent).map { measure(WidgetStatus.name(agent), baseName) + measure(" · " + shortName($0.window), baseLabel) } }
+        let needed = (solar ? ringSize + ringGap : 0) + (names.max() ?? 0) + 4 + measure("100%", baseName, .medium) + 4
+        return min(1, column / needed)
+    }
 
     private func shortName(_ name: String) -> String {
         switch name {

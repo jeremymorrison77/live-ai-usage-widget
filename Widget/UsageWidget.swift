@@ -54,6 +54,12 @@ struct Provider: TimelineProvider {
                                 policy: .after(reveal.until)))
             return
         }
+        // Just after a reading goes back (a second click, or time up), a short plan too, so it goes back as quickly.
+        if let last = StatusStore.lastReveal(), now.timeIntervalSince(last.until) < 30 {
+            completion(Timeline(entries: [StatusEntry(date: now, status: status), StatusEntry(date: now.addingTimeInterval(300), status: status)],
+                                policy: .after(now.addingTimeInterval(300))))
+            return
+        }
         if status?.checking(at: now) == true {
             let ticks = (1...3).map { StatusEntry(date: now.addingTimeInterval(Double($0)), status: status) }
             completion(Timeline(entries: [StatusEntry(date: now, status: status)] + ticks, policy: .after(now.addingTimeInterval(3))))
