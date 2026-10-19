@@ -1,5 +1,9 @@
 # Validation record
 
+## 1.3.1 (build 33) — 10/19/2026
+
+Owner tested the click-to-show-reset on his own Mac (test builds): shows "Resets …" within about half a second, a second click goes back, names fit. Click timing filmed on a test Mac: about 0.5 s with a two-entry plan (3.5 s with the full plan). Release ZIP as a real download on a fresh test Mac: moved itself, connected ChatGPT Codex; Claude Code reported sign-in required because the test Mac's saved Claude sign-in had expired (confirmed with Claude Code itself), not an app fault. Published files downloaded back, checksums matched, Gatekeeper accepted; installed on the owner's Mac. Notarization Accepted (submission 6b10783a-0673-4823-8dd1-358205562209; app ZIP SHA-256 721768e71df5d79facde0f68f7ce84152389d9d15c664970e92e69d0c39e2cb8).
+
 ## 1.3.0 (build 32) — 10/19/2026
 
 All three widget sizes placed on a fresh test Mac's desktop and checked live in every combination: Bars and Solar, Show amount used off and on, both accounts, Claude Code only, ChatGPT Codex only, plus the small widget with two readings chosen. Numbers and fills switch between left and used, rings fill clockwise, both styles share one background, rows spread evenly and stay at the top when few. Release ZIP as a real download: moved itself and connected both accounts by itself. A 1.2.0 install recorded "1.3.0 available" for the widget's status line, updated in about 1 second, and the notice cleared. Published files downloaded back and checksums matched. Notarization Accepted (submission 4a277ce8-49b6-43fc-aac0-19ccd9c2636c; app ZIP SHA-256 548c2764bfd5fe18dabebc874dfc53e210026badd1c52e075a9524ab747e3f8e).
