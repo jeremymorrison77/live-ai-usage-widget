@@ -51,7 +51,8 @@ struct UsageStatusView: View {
         if !compact { return windows }
         let all = agents.flatMap { a in self.windows(a).map { (a, $0) } }
             .filter { !settings.hiddenSmallMetrics.contains(UsageHistory.key($0.0, $0.1.window)) }
-            .prefix(5)
+            // Six fit: every Claude Code, ChatGPT Codex and Grok Bot reading at once.
+            .prefix(6)
         return all.filter { $0.0 == agent }.map { $0.1 }
     }
     private var count: Int { agents.reduce(0) { $0 + shown($1).count } }

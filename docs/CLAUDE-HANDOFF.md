@@ -20,6 +20,10 @@ Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for
 
 Keep commits on the GitHub noreply address. Never add credentials, account screenshots or personal paths.
 
+## Unreleased: Grok Bot (grokbot-usage branch, 11/1/2026)
+
+Third provider key `grokbot` ("Grok Bot"). `WidgetStatus.providers` lists all three; `WidgetStatus.tools` only the two CLIs (install, find, sign-in, diagnostics). Helper files stay free of Shared types, so `Collector`/`Main` list the three keys themselves. `UsageReader.grokBot()` reads the feed file (docs/GROKBOT-FEED.md); `Collector.collect` never gates `grokbot`. New `AgentUsage.maximumAge` (3 h for Grok Bot) and `sharedWithOtherApps`, both carried through `merged`. New failure reason `feed_missing`. Medium layout: `columns` puts accounts 2 and 3 in the second column. Small widget cap 6. `bash scripts/render_grokbot.sh` draws all widgets and Settings with the real feed file into build/grokbot-preview/. Not yet checked as a live desktop widget (needs a signed build).
+
 ## 1.3.1 (10/19/2026)
 
 Small widget: each reading is a `Button(intent: ShowResetIntent(key:))` (`RevealButton`); the intent writes `reveal.json` (key, until = +4 s, or now on a second click of the same reading). While a reveal is active, and for 30 s after it ends, the timeline has only two entries: Mac renders every planned entry before showing the first, so the normal 37-entry plan delayed clicks by ~3.5 s. The swap has no animation. Name size: `fit` measures the longest "name · limit" plus ring and "100%" with NSFont against the widget's own width (GeometryReader in `StatusView`) and scales one size for all rows.

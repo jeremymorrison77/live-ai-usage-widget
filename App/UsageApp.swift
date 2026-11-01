@@ -767,7 +767,7 @@ struct SettingsView: View {
                         HStack { Text(metricTitle(key)); Spacer(); Text("Not included in your plan").font(.caption) }
                     }.disabled(true)
                 }
-                Text("Up to five readings, in provider order. Medium and large show every available reading.").font(.caption).foregroundStyle(.secondary)
+                Text("Up to six readings, in provider order. Medium and large show every available reading.").font(.caption).foregroundStyle(.secondary)
             }
             }
             Section("Troubleshooting") {

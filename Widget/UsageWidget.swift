@@ -88,7 +88,7 @@ struct UsageWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: StatusStore.kind, provider: Provider()) { WidgetView(entry: $0) }
             .configurationDisplayName("Live AI Usage Widget")
-            .description("How much of your Claude Code and ChatGPT Codex limits is left or used.")
+            .description("How much of your Claude Code, ChatGPT Codex and Grok Bot limits is left or used.")
             .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
