@@ -600,9 +600,6 @@ struct AccountRow: View {
                     }
                 }
             }
-            if enabled && usage?.sharedWithOtherApps == true {
-                Text("The weekly limit is shared with other apps on your Grok Bot plan.").font(.caption).foregroundStyle(.secondary)
-            }
         }
     }
     /// Short reason shown beside the button.

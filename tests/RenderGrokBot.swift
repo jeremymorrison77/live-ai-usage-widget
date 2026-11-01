@@ -23,7 +23,7 @@ import SwiftUI
         let format = ISO8601DateFormatter()
         print(String(format: "Grok Bot · %@: %.1f%% used, %.1f%% left", weekly.displayName, weekly.usedPercent, weekly.leftPercent),
               "· resets", weekly.resetsAt.map(format.string) ?? "unknown", "· updated", grok.observedAt.map(format.string) ?? "unknown",
-              "· shared with other apps:", grok.sharedWithOtherApps == true ? "yes" : "no", "· old reading:", grok.isStale(at: now) ? "yes" : "no")
+              "· old reading:", grok.isStale(at: now) ? "yes" : "no")
         let ok = UsageRefresh(status: .ok, lastAttemptAt: now, lastSuccessAt: now, lastFailureAt: nil, failureReason: nil)
         let claude = [UsageWindow(window: "5-hour", usedPercent: 38, resetsAt: now.addingTimeInterval(2.2 * hour)),
                       UsageWindow(window: "weekly all", usedPercent: 76, resetsAt: now.addingTimeInterval(74 * hour)),

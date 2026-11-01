@@ -118,7 +118,7 @@ struct AgentUsage: Codable {
     let observedAt: Date?
     let windows: [UsageWindow]
     var refresh: UsageRefresh? = nil
-    /// Grok Bot: its weekly limit is shared with other apps on the same plan.
+    /// Grok Bot: the feed says its weekly limit is shared with other apps on the plan. Kept from the file, never shown.
     var sharedWithOtherApps: Bool? = nil
     /// How old a reading may get before it fades, when the account sets its own (Grok Bot's file is written hourly: 3 hours).
     var maximumAge: TimeInterval? = nil

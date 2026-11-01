@@ -26,7 +26,7 @@ The app has no Dock icon. It lives in the menu bar (a ring with a pulse line): o
 
 **General.** Version and Check for updates, Check for updates automatically (on by default), Open at login (on by default).
 
-**Accounts.** One line each for Claude Code, ChatGPT Codex and Grok Bot: its state (Connected, Connecting…, Not installed, or what went wrong) and one button for the next step: Install, Connect, Disconnect, or Sign In, Update, Finish Setup or Try Again when something needs attention. No Terminal needed. On first launch, tools that are already installed and signed in connect on their own. Disconnect only hides that account; the tool stays signed in. Grok Bot has no tool to install or sign in to: it reads a small file a Grok Bot routine writes each hour (see [Grok Bot usage file](docs/GROKBOT-FEED.md)). It shows Connected while that file is under 3 hours old, otherwise "No usage file yet" or "Reading is over 3 hours old" with Try Again, and a note when its weekly limit is shared with other apps on the plan.
+**Accounts.** One line each for Claude Code, ChatGPT Codex and Grok Bot: its state (Connected, Connecting…, Not installed, or what went wrong) and one button for the next step: Install, Connect, Disconnect, or Sign In, Update, Finish Setup or Try Again when something needs attention. No Terminal needed. On first launch, tools that are already installed and signed in connect on their own. Disconnect only hides that account; the tool stays signed in. Grok Bot has no tool to install or sign in to: it reads a small file a Grok Bot routine writes each hour (see [Grok Bot usage file](docs/GROKBOT-FEED.md)). It shows Connected while that file is under 3 hours old, otherwise "No usage file yet" or "Reading is over 3 hours old" with Try Again.
 
 **Appearance.** Style: Bars (default) or Solar. Both use the same background and colors; only the way readings are drawn differs. Show amount used: off shows what is left, on shows what is used; each style remembers its own choice (Bars starts off, Solar starts on). Date format: US (default) or European. Usage colors on or off, with three color bands you can recolor and re-threshold (30% or more remaining, 11–29%, 10% or less by default).
 
@@ -42,7 +42,7 @@ Changes apply as you make them; there is no Save button. You can close the windo
 
 ## What it shows
 
-- The percentage left (or used) for each limit your plan exposes: Claude Code's five-hour, weekly and any model-specific weekly windows; ChatGPT Codex five-hour and weekly; Grok Bot weekly (the large widget notes when it is shared with other apps on the plan). ChatGPT Codex here means Codex coding allowances, not other ChatGPT products or API billing.
+- The percentage left (or used) for each limit your plan exposes: Claude Code's five-hour, weekly and any model-specific weekly windows; ChatGPT Codex five-hour and weekly; Grok Bot weekly. ChatGPT Codex here means Codex coding allowances, not other ChatGPT products or API billing.
 - When each limit resets, and when it was last updated. Readings fade as they age and failures show their date. A newly connected account appears right away with Loading… until its first reading arrives.
 
 ## Requirements

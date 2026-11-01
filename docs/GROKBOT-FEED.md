@@ -21,7 +21,7 @@ Only the app reads this file, and the app is not sandboxed, so it can read it in
 - `source`: must be `"grokbot"`.
 - `weekly.usedPercent`: a number from 0 to 100. The app shows it as used or left (100 minus it), following Show amount used in Settings.
 - `weekly.resetsAt`: when the weekly limit resets, an ISO 8601 time with a time zone (`Z` or an offset). Optional; without it no reset time is shown.
-- `weekly.sharedWithOtherApps`: `true` adds the note that the limit is shared with other apps on the plan. Optional, off when missing.
+- `weekly.sharedWithOtherApps`: whether the limit is shared with other apps on the plan. Optional; read and kept but not shown anywhere.
 - `updatedAt`: when the reading was taken, ISO 8601 with a time zone. Required.
 - `plan`: kept for reference; not shown.
 

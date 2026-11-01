@@ -154,9 +154,7 @@ struct UsageStatusView: View {
                     }.frame(height: large ? 5 : 3).padding(.top, 2)
                 }
                 if large || !compact || roomy {
-                    // Grok Bot's weekly limit can be shared with other apps on the plan; the large widget says so.
-                    let shared = large && !waiting && status?.usage?[agent]?.sharedWithOtherApps == true ? " · shared with other apps" : ""
-                    Text(waiting ? (status?.usage?[agent]?.refresh?.status == .failed ? "Couldn't load · see Settings" : "Loading…") : (stale ? "Old reading" : window.resetText(at: date) ?? "") + shared)
+                    Text(waiting ? (status?.usage?[agent]?.refresh?.status == .failed ? "Couldn't load · see Settings" : "Loading…") : stale ? "Old reading" : window.resetText(at: date) ?? "")
                         .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.85)
                 }
             }

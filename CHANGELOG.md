@@ -2,7 +2,7 @@
 
 ## Unreleased (grokbot-usage branch)
 
-Grok Bot is a third account. It shows one reading, Weekly, as left or used like the others, with its reset time; the large widget and Settings note when the limit is shared with other apps on the plan. Grok Bot has no tool to sign in to: a Grok Bot routine writes a small file each hour and the app reads it during its normal check (see docs/GROKBOT-FEED.md). Its readings fade after 3 hours. Settings > Accounts, the menu bar list and Small widget readings include it; Disconnect only hides it. The medium widget puts ChatGPT Codex and Grok Bot in the second column. The small widget now shows up to six readings.
+Grok Bot is a third account. It shows one reading, Weekly, as left or used like the others, with its reset time. Grok Bot has no tool to sign in to: a Grok Bot routine writes a small file each hour and the app reads it during its normal check (see docs/GROKBOT-FEED.md). Its readings fade after 3 hours. Settings > Accounts, the menu bar list and Small widget readings include it; Disconnect only hides it. The medium widget puts ChatGPT Codex and Grok Bot in the second column. The small widget now shows up to six readings.
 
 ## 1.3.1
 
