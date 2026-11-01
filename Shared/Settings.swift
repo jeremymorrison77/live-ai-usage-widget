@@ -25,7 +25,7 @@ struct WidgetSettings: Codable, Equatable {
     enum CodingKeys: String, CodingKey { case enabled, generation, usDates, usageColors, highThreshold, lowThreshold, highColor, middleColor, lowColor, style, hiddenSmallMetrics, refreshMinutes, autoDetected, autoUpdates, availableUpdate, showUsed }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        enabled = (try c.decodeIfPresent([String].self, forKey: .enabled) ?? []).filter { ["claude", "codex"].contains($0) }
+        enabled = (try c.decodeIfPresent([String].self, forKey: .enabled) ?? []).filter { WidgetStatus.providers.contains($0) }
         generation = try c.decodeIfPresent(String.self, forKey: .generation) ?? "initial"
         usDates = try c.decodeIfPresent(Bool.self, forKey: .usDates) ?? true
         usageColors = try c.decodeIfPresent(Bool.self, forKey: .usageColors) ?? true

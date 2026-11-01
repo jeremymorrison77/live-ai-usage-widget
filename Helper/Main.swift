@@ -9,7 +9,7 @@ import Darwin
         guard let path = option("--state-dir"), path.hasPrefix("/"), let generation = option("--generation"),
               let index = args.firstIndex(of: "--providers") else { exit(64) }
         let providers = Array(args.dropFirst(index+1))
-        guard Set(providers).isSubset(of: ["claude", "codex"]) else { exit(64) }
+        guard Set(providers).isSubset(of: ["claude", "codex", "grokbot"]) else { exit(64) }
         do {
             let data = try Collector.run(root: URL(fileURLWithPath: path), generation: generation, providers: providers)
             FileHandle.standardOutput.write(data)

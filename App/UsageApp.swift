@@ -109,14 +109,14 @@ import UniformTypeIdentifiers
     func diagnosticReport() async -> String {
         let settings = self.settings, status = self.status
         let tools: [String] = await Task.detached {
-            ["claude", "codex"].map { provider in
+            WidgetStatus.tools.map { provider in
                 let name = WidgetStatus.name(provider)
                 guard let binary = try? UsageReader.find(provider) else { return name + ": not installed" }
                 let signed = UsageReader.signedIn(provider, directory: FileManager.default.temporaryDirectory)
                 return name + ": " + Diagnostics.clean(binary) + " · " + Diagnostics.toolVersion(binary) + " · signed in " + (signed.map { $0 ? "yes" : "no" } ?? "unknown")
             }
-        }.value
-        let accounts = ["claude", "codex"].map { provider -> String in
+        }.value + ["Grok Bot: usage file " + (FileManager.default.fileExists(atPath: UsageReader.grokBotFeed.path) ? "present" : "not found")]
+        let accounts = WidgetStatus.providers.map { provider -> String in
             let name = WidgetStatus.name(provider)
             guard settings.enabled.contains(provider) else { return name + ": not connected" }
             let usage = status?.usage?[provider]
@@ -167,17 +167,18 @@ import UniformTypeIdentifiers
         }
     }
     static func changed(_ old: WidgetStatus?, _ new: WidgetStatus?) -> Bool {
-        ["claude", "codex"].contains { provider in
+        WidgetStatus.providers.contains { provider in
             let a = old?.usage?[provider], b = new?.usage?[provider]
             return a?.observedAt != b?.observedAt || a?.refresh?.status != b?.refresh?.status || a?.refresh?.lastAttemptAt != b?.refresh?.lastAttemptAt
         }
     }
     /// Screens never wait on Terminal: they use the common places plus the last background answer.
-    func installed(_ provider: String) -> Bool { (try? UsageReader.find(provider, askShell: false)) != nil }
+    /// Grok Bot has no tool to install: it counts as installed, and its file decides whether it connects.
+    func installed(_ provider: String) -> Bool { provider == "grokbot" || (try? UsageReader.find(provider, askShell: false)) != nil }
     /// Asks Terminal in the background where each tool lives, then redraws.
     func lookUpTools() {
         Task.detached {
-            for provider in ["claude", "codex"] { _ = try? UsageReader.find(provider) }
+            for provider in WidgetStatus.tools { _ = try? UsageReader.find(provider) }
             await MainActor.run { self.objectWillChange.send() }
         }
     }
@@ -187,8 +188,15 @@ import UniformTypeIdentifiers
     func connect(_ provider: String) {
         Diagnostics.log(toolName(provider) + ": Connect clicked")
         connecting.insert(provider)
+        // Grok Bot only needs its file: turn it on and read it with the next check, leaving the other accounts' timing alone.
+        if provider == "grokbot" {
+            settings.enabled = WidgetStatus.providers.filter { $0 == provider || settings.enabled.contains($0) }
+            save()
+            refresh()
+            return
+        }
         if !settings.enabled.contains(provider) {
-            settings.enabled = ["claude", "codex"].filter { $0 == provider || settings.enabled.contains($0) }
+            settings.enabled = WidgetStatus.providers.filter { $0 == provider || settings.enabled.contains($0) }
             settings.generation = UUID().uuidString
             save()
         }
@@ -223,13 +231,14 @@ import UniformTypeIdentifiers
             defer { autoDetecting = false }
             try? FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true)
             var found: [String] = []
-            for provider in ["claude", "codex"] where installed(provider) {
+            for provider in WidgetStatus.tools where installed(provider) {
                 connecting.insert(provider)
                 working[provider] = "Checking sign-in…"
                 if await Task.detached(operation: { UsageReader.signedIn(provider, directory: probe) }).value == true { found.append(provider) }
                 working[provider] = nil
             }
-            connecting.subtract(["claude", "codex"].filter { !found.contains($0) })
+            connecting.subtract(WidgetStatus.tools.filter { !found.contains($0) })
+            if FileManager.default.fileExists(atPath: UsageReader.grokBotFeed.path) { found.append("grokbot") }
             Diagnostics.log("First launch: found signed in " + (found.isEmpty ? "none" : found.map(toolName).joined(separator: ", ")))
             // Marked done only once finished: a copy that quits mid-check (Move to Applications) leaves it to the moved copy.
             settings.autoDetected = true
@@ -467,7 +476,7 @@ struct MenuContent: View {
             Divider()
         }
         // One line per account in the settings window's words. Every line has an icon so all text lines up.
-        ForEach(["claude", "codex"], id: \.self) { provider in
+        ForEach(WidgetStatus.providers, id: \.self) { provider in
             let name = WidgetStatus.name(provider)
             let installed = model.installed(provider)
             let connected = model.settings.enabled.contains(provider) && model.isConnected(provider)
@@ -527,6 +536,7 @@ struct AccountRow: View {
         let link = busy != nil ? model.signInLink[provider] : nil
         // Why the last check failed, shown beside the button that fixes it.
         let problem = busy == nil && installed && !connected && model.settings.enabled.contains(provider) ? model.status?.usage?[provider]?.refresh?.failureReason : nil
+        if provider == "grokbot" { grokBot(connected: connected, busy: busy != nil, problem: problem) } else {
         HStack {
             Text(name)
             Spacer()
@@ -554,6 +564,41 @@ struct AccountRow: View {
                     else if let problem { Text(Self.title(problem)) }
                     else { Text("Connect") }
                 }
+            }
+        }
+        }
+    }
+    /// Grok Bot reads a file a Grok Bot routine writes each hour, so its states are about that file, not a sign-in.
+    @ViewBuilder private func grokBot(connected: Bool, busy: Bool, problem: UsageFailureReason?) -> some View {
+        let enabled = model.settings.enabled.contains(provider)
+        let usage = model.status?.usage?[provider]
+        let old = enabled && problem == nil && usage?.windows.isEmpty == false && usage?.isStale(at: Date()) == true
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(WidgetStatus.name(provider))
+                Spacer()
+                if busy {
+                    ProgressView().controlSize(.small)
+                    Text("Connecting…").foregroundStyle(.secondary)
+                } else if connected {
+                    Label("Connected", systemImage: "checkmark.circle.fill").labelStyle(StatusLabel(color: .green))
+                } else if problem == .feedMissing {
+                    Label("No usage file yet", systemImage: "exclamationmark.circle.fill").labelStyle(StatusLabel(color: .orange))
+                } else if old {
+                    Label("Reading is over 3 hours old", systemImage: "exclamationmark.circle.fill").labelStyle(StatusLabel(color: .orange))
+                } else if problem != nil {
+                    Label("Couldn't read usage file", systemImage: "exclamationmark.circle.fill").labelStyle(StatusLabel(color: .orange))
+                }
+                if !busy {
+                    Button {
+                        if connected { model.disconnect(provider) } else if enabled { model.refresh() } else { model.connect(provider) }
+                    } label: {
+                        if connected { Text("Disconnect") } else if enabled { Text("Try Again") } else { Text("Connect") }
+                    }
+                }
+            }
+            if enabled && usage?.sharedWithOtherApps == true {
+                Text("The weekly limit is shared with other apps on your Grok Bot plan.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
@@ -669,7 +714,7 @@ struct SettingsView: View {
                 }
             }
             Section("Accounts") {
-                ForEach(["claude", "codex"], id: \.self) { provider in
+                ForEach(WidgetStatus.providers, id: \.self) { provider in
                     AccountRow(model: model, provider: provider)
                 }
             }
@@ -821,7 +866,7 @@ struct SettingsView: View {
         }
     }
     private func metricTitle(_ key: String) -> String {
-        key.replacingOccurrences(of: "claude:", with: WidgetStatus.name("claude") + " · ").replacingOccurrences(of: "codex:", with: WidgetStatus.name("codex") + " · ")
+        WidgetStatus.providers.reduce(key) { $0.replacingOccurrences(of: $1 + ":", with: WidgetStatus.name($1) + " · ") }
     }
     private func colorPicker(_ hex: Binding<String>) -> some View {
         ColorPicker("Color", selection: Binding(get: { WidgetSettings.color(hex: hex.wrappedValue) }, set: { color in

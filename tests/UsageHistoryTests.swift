@@ -68,6 +68,42 @@ struct UsageHistoryTests {
         precondition(WidgetStatus.notInPlan("claude", have: ["5-hour", "weekly all"]) == ["weekly Fable"])
         precondition(WidgetStatus.notInPlan("claude", have: ["5-hour", "weekly all", "weekly Opus"]).isEmpty)
         precondition(WidgetStatus.notInPlan("claude", have: []).isEmpty)
-        print("Usage history checks passed: real rates, quiet intervals, resets, gaps, missing reset identity, clock skew, duplicates, retention, bounded storage, standalone store and failed-refresh persistence, limits not in plan")
+        // Grok Bot: one weekly reading, published like the others, fading after 3 hours instead of 45 minutes.
+        let grokDestination = directory.appendingPathComponent("grok-status.json")
+        func grok(_ updated: Date, _ used: Double, shared: Bool = true) throws -> Data {
+            try JSONSerialization.data(withJSONObject: ["usage": ["grokbot": [
+                "status": "ok", "observed_at": iso.string(from: updated), "refresh_status": "ok",
+                "last_attempt_at": iso.string(from: now), "last_success_at": iso.string(from: updated),
+                "shared_with_other_apps": shared, "maximum_age_seconds": 10800,
+                "windows": [["window": "weekly", "used_percent": used, "resets_at": iso.string(from: now.addingTimeInterval(6 * 86400))]]
+            ]]])
+        }
+        let grokStatus = try StatusStore.publishUsage(input: grok(now.addingTimeInterval(-3600), 7.2), to: grokDestination, enabled: ["claude", "grokbot"])
+        let grokUsage = grokStatus.usage!["grokbot"]!
+        precondition(grokUsage.windows.count == 1 && grokUsage.windows[0].usedPercent == 7.2 && grokUsage.sharedWithOtherApps == true)
+        precondition(abs(grokUsage.windows[0].leftPercent - 92.8) < 0.0001 && grokUsage.windows[0].displayName == "Weekly")
+        precondition(!grokUsage.isStale(at: now) && !grokUsage.isStale(at: now.addingTimeInterval(7100)))
+        precondition(grokUsage.isStale(at: now.addingTimeInterval(7200)), "Older than 3 hours fades")
+        precondition(grokStatus.usageHistory?[UsageHistory.key("grokbot", "weekly")]?.count == 1)
+        // The 3-hour allowance and the shared note survive a later failed check.
+        let missing = try JSONSerialization.data(withJSONObject: ["usage": ["grokbot": ["status": "ok", "refresh_status": "failed",
+            "last_attempt_at": iso.string(from: now.addingTimeInterval(5)), "last_failure_at": iso.string(from: now.addingTimeInterval(5)), "failure_reason": "feed_missing", "windows": []]]])
+        let grokFailed = try StatusStore.publishUsage(input: missing, to: grokDestination, enabled: ["grokbot"]).usage!["grokbot"]!
+        precondition(grokFailed.refresh?.failureReason == .feedMissing && grokFailed.maximumAge == 10800 && grokFailed.sharedWithOtherApps == true)
+        precondition(grokFailed.windows.count == 1)
+        let unshared = try StatusStore.publishUsage(input: grok(now, 9, shared: false), to: grokDestination, enabled: ["grokbot"])
+        precondition(unshared.usage!["grokbot"]!.sharedWithOtherApps == false)
+        // Turning Grok Bot off hides it; unknown accounts are still dropped from settings.
+        let hidden = try StatusStore.publishUsage(input: grok(now, 9), to: grokDestination, enabled: ["claude"])
+        precondition(hidden.usage?["grokbot"] == nil)
+        let decoded = try JSONDecoder().decode(WidgetSettings.self, from: Data(#"{"enabled":["claude","grokbot","other"]}"#.utf8))
+        precondition(decoded.enabled == ["claude", "grokbot"])
+        precondition(WidgetStatus.name("grokbot") == "Grok Bot" && WidgetStatus.expectedWindows("grokbot") == ["weekly"])
+        precondition(WidgetStatus.notInPlan("grokbot", have: ["weekly"]).isEmpty)
+        // The footer time follows the tool accounts; Grok Bot's hourly file sets it only when it is the only account.
+        let mixed = WidgetStatus(usage: ["codex": AgentUsage(observedAt: now, windows: []), "grokbot": AgentUsage(observedAt: now.addingTimeInterval(-3000), windows: [])])
+        precondition(mixed.usageObservedAt == now)
+        precondition(WidgetStatus(usage: ["grokbot": grokUsage]).usageObservedAt == grokUsage.observedAt)
+        print("Usage history checks passed: real rates, quiet intervals, resets, gaps, missing reset identity, clock skew, duplicates, retention, bounded storage, standalone store and failed-refresh persistence, limits not in plan, Grok Bot readings")
     }
 }

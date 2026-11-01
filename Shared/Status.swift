@@ -30,7 +30,7 @@ enum UsageHistory {
     static func recording(_ old: [String: [UsageObservation]], usage: [String: AgentUsage],
                           at now: Date) -> [String: [UsageObservation]] {
         var result: [String: [UsageObservation]] = [:]
-        for agent in ["claude", "codex"] {
+        for agent in WidgetStatus.providers {
             for name in Set((usage[agent]?.windows.map(\.window) ?? []) + old.keys.filter { $0.hasPrefix(agent + ":") }.map { String($0.dropFirst(agent.count + 1)) }).sorted().prefix(8) {
                 let id = key(agent, name)
                 var samples = (old[id] ?? []).filter {
@@ -90,6 +90,8 @@ enum UsageFailureReason: String, Codable {
     case outputTooLarge = "output_too_large"
     case probeDirectoryUnavailable = "probe_directory_unavailable"
     case snapshotWriteFailed = "snapshot_write_failed"
+    /// Grok Bot only: its usage file isn't there yet.
+    case feedMissing = "feed_missing"
     case unavailable
 
     func actionLabel(agent: String) -> String {
@@ -116,12 +118,16 @@ struct AgentUsage: Codable {
     let observedAt: Date?
     let windows: [UsageWindow]
     var refresh: UsageRefresh? = nil
+    /// Grok Bot: its weekly limit is shared with other apps on the same plan.
+    var sharedWithOtherApps: Bool? = nil
+    /// How old a reading may get before it fades, when the account sets its own (Grok Bot's file is written hourly: 3 hours).
+    var maximumAge: TimeInterval? = nil
     // Readings fade after 45 minutes, or later when checks are spaced further apart.
     static var staleAfter: TimeInterval { max(45 * 60, Double(WidgetSettings.load().refreshMinutes) * 90) }
 
     func isStale(at date: Date) -> Bool {
         guard let observedAt else { return true }
-        return date.timeIntervalSince(observedAt) >= AgentUsage.staleAfter || observedAt.timeIntervalSince(date) > 30
+        return date.timeIntervalSince(observedAt) >= (maximumAge ?? AgentUsage.staleAfter) || observedAt.timeIntervalSince(date) > 30
     }
     static func resetLabel(_ reset: Date, at date: Date, calendar: Calendar = .current) -> String {
         let formatter = DateFormatter()
@@ -220,13 +226,19 @@ struct WidgetStatus: Codable {
             "codex": AgentUsage(observedAt: now, windows: [UsageWindow(window: "5-hour", usedPercent: 18, resetsAt: now.addingTimeInterval(3.4 * hour)),
                                                           UsageWindow(window: "weekly", usedPercent: 92, resetsAt: now.addingTimeInterval(118 * hour))], refresh: ok)])
     }
+    /// Every account, in the order shown everywhere. Grok Bot is read from a file, not a sign-in tool.
+    static let providers = ["claude", "codex", "grokbot"]
+    /// Accounts read through an installed command-line tool.
+    static let tools = ["claude", "codex"]
     // Usage freshness is independent of recording and health publication.
+    /// Grok Bot's file is written hourly, so it only sets the footer time when it is the only account.
     var usageObservedAt: Date? {
-        ["claude", "codex"].compactMap { usage?[$0]?.observedAt }.min()
+        let tools = Self.tools.compactMap { usage?[$0]?.observedAt }
+        return tools.isEmpty ? usage?["grokbot"]?.observedAt : tools.min()
     }
     /// Only an explicit failed attempt is a failure. Old cache files have no such evidence.
     var usageFailure: (agent: String, refresh: UsageRefresh)? {
-        ["claude", "codex"].compactMap { key -> (agent: String, refresh: UsageRefresh)? in
+        Self.providers.compactMap { key -> (agent: String, refresh: UsageRefresh)? in
             guard let refresh = usage?[key]?.refresh, refresh.status == .failed else { return nil }
             // Being asked to wait (rate limited) isn't a failure while the last reading is still fresh.
             if refresh.failureReason == .rateLimited, usage?[key]?.isStale(at: Date()) == false { return nil }
@@ -235,19 +247,21 @@ struct WidgetStatus: Codable {
             ($1.refresh.lastFailureAt ?? $1.refresh.lastAttemptAt ?? .distantPast) }
     }
     /// The limits each account usually reports, shown as placeholders until its first reading arrives.
-    static func expectedWindows(_ provider: String) -> [String] { provider == "claude" ? ["5-hour", "weekly all", "weekly Fable"] : ["5-hour", "weekly"] }
+    static func expectedWindows(_ provider: String) -> [String] {
+        provider == "claude" ? ["5-hour", "weekly all", "weekly Fable"] : provider == "grokbot" ? ["weekly"] : ["5-hour", "weekly"]
+    }
     /// Limits this account's plan does not have, judged from a real reading. Per the official plan pages
     /// (10/18/2026): ChatGPT Pro has no 5-hour limit, and only Claude Max and Premium seats have a weekly Fable
     /// limit. Any model-specific weekly limit counts as that plan's model limit.
     static func notInPlan(_ provider: String, have: [String]) -> [String] {
-        guard !have.isEmpty else { return [] }
+        guard !have.isEmpty, provider != "grokbot" else { return [] }
         return expectedWindows(provider).filter { want in
             if want == "weekly Fable" { return !have.contains { $0.hasPrefix("weekly ") && $0 != "weekly all" } }
             return !have.contains(want)
         }
     }
     /// The one name used for each account everywhere.
-    static func name(_ provider: String) -> String { provider == "claude" ? "Claude Code" : "ChatGPT Codex" }
+    static func name(_ provider: String) -> String { provider == "claude" ? "Claude Code" : provider == "grokbot" ? "Grok Bot" : "ChatGPT Codex" }
     static func updateDateLabel(_ date: Date?, calendar: Calendar = .current) -> String {
         guard let date else { return "time unknown" }
         let formatter = DateFormatter()
@@ -265,7 +279,7 @@ struct WidgetStatus: Codable {
     /// The wait is the app's own (15 minutes, or the check interval if longer); Anthropic doesn't publish one.
     func pausedUntil(at now: Date = Date()) -> Date? {
         let wait = max(900, Double(WidgetSettings.load().refreshMinutes) * 60)
-        return ["claude", "codex"].compactMap { key -> Date? in
+        return Self.providers.compactMap { key -> Date? in
             guard let refresh = usage?[key]?.refresh, refresh.status == .failed, refresh.failureReason == .rateLimited,
                   let failed = refresh.lastFailureAt, failed.addingTimeInterval(wait) > now else { return nil }
             return failed.addingTimeInterval(wait)
@@ -281,7 +295,7 @@ struct WidgetStatus: Codable {
     }
     func usageLastSuccessText(compact: Bool = false, calendar: Calendar = .current) -> String? {
         guard let failure = usageFailure else { return nil }
-        let candidates = [failure.refresh.lastSuccessAt, usage?[failure.agent == Self.name("claude") ? "claude" : "codex"]?.observedAt].compactMap { $0 }
+        let candidates = [failure.refresh.lastSuccessAt, usage?[Self.providers.first { Self.name($0) == failure.agent } ?? ""]?.observedAt].compactMap { $0 }
         guard !candidates.isEmpty else { return compact ? "No successful update yet" : "Last successful update: none yet" }
         let lastSuccess = candidates.filter { $0 <= Date().addingTimeInterval(30) }.max()
         return (compact ? "Last OK " : "Last successful update ") + Self.updateDateLabel(lastSuccess, calendar: calendar)
@@ -305,6 +319,8 @@ struct UsageInputModel {
         let last_success_at: String?
         let last_failure_at: String?
         let failure_reason: String?
+        let shared_with_other_apps: Bool?
+        let maximum_age_seconds: Double?
 
         var refresh: UsageRefresh? {
             guard let rawStatus = refresh_status, let status = UsageRefreshStatus(rawValue: rawStatus) else { return nil }
@@ -323,14 +339,15 @@ struct UsageInputModel {
 
     static func agentUsage(_ inputs: [String: UsageInput]) -> [String: AgentUsage] {
         var result: [String: AgentUsage] = [:]
-        for (name, input) in inputs where ["claude", "codex"].contains(name) {
+        for (name, input) in inputs where WidgetStatus.providers.contains(name) {
             let windows = (input.status == "ok" ? input.windows ?? [] : []).compactMap { item -> UsageWindow? in
                 guard let name = item.window, let used = item.used_percent, used.isFinite, (0...100).contains(used) else { return nil }
                 return UsageWindow(window: name, usedPercent: used, resetsAt: UsageInputModel.parseDate(item.resets_at))
             }
             if !windows.isEmpty || input.refresh != nil {
                 result[name] = AgentUsage(observedAt: windows.isEmpty ? nil : UsageInputModel.parseDate(input.observed_at),
-                    windows: windows, refresh: input.refresh)
+                    windows: windows, refresh: input.refresh, sharedWithOtherApps: input.shared_with_other_apps,
+                    maximumAge: input.maximum_age_seconds.flatMap { $0.isFinite && $0 > 0 ? $0 : nil })
             }
         }
         return result
@@ -421,7 +438,7 @@ enum StatusStore {
     static func merged(_ old: [String: AgentUsage], _ new: [String: AgentUsage]) -> [String: AgentUsage] {
         var result = old
         let latestAllowed = Date().addingTimeInterval(30)
-        for (key, value) in new where ["claude", "codex"].contains(key) {
+        for (key, value) in new where WidgetStatus.providers.contains(key) {
             let previous = result[key]
             // Source observations and refresh attempts can arrive through separate publishers in either order.
             let previousObserved = (previous?.observedAt).flatMap { $0 <= latestAllowed ? $0 : nil }
@@ -431,7 +448,9 @@ enum StatusStore {
             let refresh = mergedRefresh(previous?.refresh, value.refresh, latestAllowed: latestAllowed)
             if useReading || previous != nil || refresh != nil {
                 result[key] = AgentUsage(observedAt: useReading ? value.observedAt : previous?.observedAt,
-                    windows: useReading ? value.windows : previous?.windows ?? [], refresh: refresh)
+                    windows: useReading ? value.windows : previous?.windows ?? [], refresh: refresh,
+                    sharedWithOtherApps: useReading ? value.sharedWithOtherApps : previous?.sharedWithOtherApps,
+                    maximumAge: value.maximumAge ?? previous?.maximumAge)
             }
         }
         return result

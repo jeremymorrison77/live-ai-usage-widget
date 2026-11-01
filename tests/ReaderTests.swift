@@ -121,8 +121,40 @@ import Darwin
         _ = Collector.collect(previous: hourly, providers: ["codex"], now: now.addingTimeInterval(10), interval: 3600, force: true) { _ in custom += 1; return result }
         _ = Collector.collect(previous: failed, providers: ["codex"], now: now.addingTimeInterval(310), force: true) { _ in custom += 1; return result }
         precondition(custom == 5)
+        // Grok Bot: a small file a Grok Bot routine writes hourly; read on every check, never gated or started.
+        let feed = Data(#"{"source":"grokbot","plan":"Ultra","weekly":{"usedPercent":7.2,"resetsAt":"2026-11-08T16:23:00Z","sharedWithOtherApps":true},"updatedAt":"2026-11-01T21:20:00Z"}"#.utf8)
+        let grok = try UsageReader.grokBotReading(feed)
+        let grokWindow = (grok["windows"] as! [[String: Any]])[0]
+        precondition(grokWindow["window"] as? String == "weekly" && grokWindow["used_percent"] as? Double == 7.2)
+        precondition(grokWindow["resets_at"] as? String == "2026-11-08T16:23:00Z" && grok["observed_at"] as? String == "2026-11-01T21:20:00Z")
+        precondition(grok["shared_with_other_apps"] as? Bool == true && grok["maximum_age_seconds"] as? Double == 3 * 3600)
+        for bad in [#"{"source":"other","weekly":{"usedPercent":7},"updatedAt":"2026-11-01T21:20:00Z"}"#,
+                    #"{"source":"grokbot","weekly":{"usedPercent":101},"updatedAt":"2026-11-01T21:20:00Z"}"#,
+                    #"{"source":"grokbot","weekly":{"usedPercent":true},"updatedAt":"2026-11-01T21:20:00Z"}"#,
+                    #"{"source":"grokbot","weekly":{"usedPercent":7}}"#, "not json"] {
+            fails { _ = try UsageReader.grokBotReading(Data(bad.utf8)) }
+        }
+        let noShare = try UsageReader.grokBotReading(Data(#"{"source":"grokbot","weekly":{"usedPercent":0},"updatedAt":"2026-11-01T21:20:00.5Z"}"#.utf8))
+        precondition(noShare["shared_with_other_apps"] as? Bool == false && (noShare["windows"] as! [[String: Any]])[0]["resets_at"] == nil)
+        let feedFile = directory.appendingPathComponent("grokbot-usage.json")
+        do { _ = try UsageReader.grokBot(file: feedFile); fatalError("A missing file must say so") }
+        catch let error as ReaderFailure { precondition(error.reason == "feed_missing") }
+        try feed.write(to: feedFile)
+        let fromFile = try UsageReader.grokBot(file: feedFile)
+        precondition((fromFile["windows"] as! [[String: Any]]).count == 1)
+        try Data(repeating: 32, count: 20000).write(to: feedFile)
+        fails { _ = try UsageReader.grokBot(file: feedFile) }
+        var grokReads = 0
+        let grokFirst = Collector.collect(previous: [:], providers: ["grokbot"], now: now) { _ in grokReads += 1; return grok }
+        let grokNext = Collector.collect(previous: grokFirst, providers: ["grokbot"], now: now.addingTimeInterval(60)) { _ in grokReads += 1; return grok }
+        precondition(grokReads == 2 && (grokNext["grokbot"] as! [String: Any])["refresh_status"] as? String == "ok")
+        let grokMissing = Collector.collect(previous: [:], providers: ["grokbot"], now: now) { _ in throw ReaderFailure("feed_missing") }
+        precondition((grokMissing["grokbot"] as! [String: Any])["failure_reason"] as? String == "feed_missing")
+        // No waiting after a missing file: the next check (a minute later) looks again.
+        _ = Collector.collect(previous: grokMissing, providers: ["grokbot"], now: now.addingTimeInterval(60)) { _ in grokReads += 1; return grok }
+        precondition(grokReads == 3)
         let empty = try Collector.run(root: directory, generation: "new", providers: [])
         let decoded = try JSONSerialization.jsonObject(with: empty) as! [String: Any]; precondition(decoded["usage"] as? [String: String] == [:])
-        print("Native reader checks passed: exact buckets, invalid values, optional models, timezone, cursor redraw, stdio, PTY, timeout, backoff, sanitized failure, recovery, disabled providers")
+        print("Native reader checks passed: exact buckets, invalid values, optional models, timezone, cursor redraw, stdio, PTY, timeout, backoff, sanitized failure, recovery, disabled providers, Grok Bot file")
     }
 }

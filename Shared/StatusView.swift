@@ -36,8 +36,11 @@ struct UsageStatusView: View {
 
     /// Every connected account shows at once; one without a reading yet shows empty "Loading…" rows.
     private var agents: [String] {
-        ["claude", "codex"].filter { settings.enabled.contains($0) }
+        WidgetStatus.providers.filter { settings.enabled.contains($0) }
     }
+    /// Medium widget: two columns. With three accounts, the first has its own column and the others share the second.
+    private var columns: [[String]] { agents.count <= 2 ? agents.map { [$0] } : [[agents[0]], Array(agents.dropFirst())] }
+    private func rowCount(_ column: [String]) -> Int { column.reduce(0) { $0 + shown($1).count } }
     private func loading(_ agent: String) -> Bool { status?.usage?[agent]?.windows.isEmpty ?? true }
     private func windows(_ agent: String) -> [UsageWindow] {
         guard loading(agent) else { return status?.usage?[agent]?.windows ?? [] }
@@ -62,12 +65,12 @@ struct UsageStatusView: View {
                 Spacer(minLength: 0)
             } else if !compact && !large {
                 // Rows share the height evenly; both columns use the longer column's row count, so rows line up across.
-                let most = agents.map { shown($0).count }.max() ?? 0
+                let most = columns.map(rowCount).max() ?? 0
                 HStack(alignment: .top, spacing: 16) {
-                    ForEach(agents, id: \.self) { agent in
+                    ForEach(columns, id: \.self) { column in
                         VStack(alignment: .leading, spacing: 4) {
-                            rows(agent)
-                            ForEach(0..<(most - shown(agent).count), id: \.self) { _ in Color.clear.frame(maxHeight: 55) }
+                            ForEach(column, id: \.self) { agent in rows(agent) }
+                            ForEach(0..<(most - rowCount(column)), id: \.self) { _ in Color.clear.frame(maxHeight: 55) }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
@@ -150,7 +153,9 @@ struct UsageStatusView: View {
                     }.frame(height: large ? 5 : 3).padding(.top, 2)
                 }
                 if large || !compact || roomy {
-                    Text(waiting ? (status?.usage?[agent]?.refresh?.status == .failed ? "Couldn't load · see Settings" : "Loading…") : stale ? "Old reading" : window.resetText(at: date) ?? "")
+                    // Grok Bot's weekly limit can be shared with other apps on the plan; the large widget says so.
+                    let shared = large && !waiting && status?.usage?[agent]?.sharedWithOtherApps == true ? " · shared with other apps" : ""
+                    Text(waiting ? (status?.usage?[agent]?.refresh?.status == .failed ? "Couldn't load · see Settings" : "Loading…") : (stale ? "Old reading" : window.resetText(at: date) ?? "") + shared)
                         .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.85)
                 }
             }
@@ -174,7 +179,7 @@ struct UsageStatusView: View {
     /// How much the names must shrink so the widest row fits its column (1 when everything fits).
     private var fit: CGFloat {
         guard width > 0 else { return 1 }
-        let column = !compact && !large && agents.count > 1 ? (width - 16) / 2 : width
+        let column = !compact && !large && columns.count > 1 ? (width - 16) / 2 : width
         func measure(_ text: String, _ size: CGFloat, _ weight: NSFont.Weight = .regular) -> CGFloat {
             (text as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: weight)]).width
         }

@@ -481,3 +481,41 @@ extension UsageReader {
         return text.localizedCaseInsensitiveContains("not logged in") ? false : text.localizedCaseInsensitiveContains("logged in") ? true : nil
     }
 }
+
+/// Grok Bot has no usage tool or public interface. A Grok Bot routine writes its weekly reading to a small file
+/// once an hour (see docs/GROKBOT-FEED.md); the app reads it during its normal check. Nothing is started or watched.
+extension UsageReader {
+    /// Grok Bot readings fade after three hours: the file is written hourly, so this allows two missed writes.
+    static let grokBotMaximumAge: TimeInterval = 3 * 3600
+    static var grokBotFeed: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Live AI Usage Widget", isDirectory: true).appendingPathComponent("grokbot-usage.json")
+    }
+    static func grokBot(file: URL = grokBotFeed) throws -> [String: Any] {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: file.path) else { throw ReaderFailure("feed_missing") }
+        guard attributes[.type] as? FileAttributeType == .typeRegular, (attributes[.size] as? Int ?? 0) < 16384,
+              let data = try? Data(contentsOf: file) else { throw ReaderFailure("invalid_usage") }
+        return try grokBotReading(data)
+    }
+    private static func date(_ value: String?) -> Date? {
+        guard let value else { return nil }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fractional.date(from: value) ?? ISO8601DateFormatter().date(from: value)
+    }
+    /// {"source":"grokbot","plan":"Ultra","weekly":{"usedPercent":7.2,"resetsAt":"…Z","sharedWithOtherApps":true},"updatedAt":"…Z"}
+    static func grokBotReading(_ data: Data) throws -> [String: Any] {
+        guard let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any], value["source"] as? String == "grokbot",
+              let weekly = value["weekly"] as? [String: Any], let used = weekly["usedPercent"] as? NSNumber,
+              CFGetTypeID(used) != CFBooleanGetTypeID(), used.doubleValue.isFinite, (0...100).contains(used.doubleValue),
+              let updated = date(value["updatedAt"] as? String) else { throw ReaderFailure("invalid_usage") }
+        var window: [String: Any] = ["window": "weekly", "used_percent": used.doubleValue]
+        if let reset = weekly["resetsAt"] as? String {
+            guard let resets = date(reset) else { throw ReaderFailure("reset_format_changed") }
+            window["resets_at"] = iso(resets)
+        }
+        return ["status": "ok", "observed_at": iso(updated), "windows": [window],
+                "shared_with_other_apps": weekly["sharedWithOtherApps"] as? Bool == true,
+                "maximum_age_seconds": grokBotMaximumAge]
+    }
+}

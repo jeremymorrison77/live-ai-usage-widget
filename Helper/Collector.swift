@@ -8,9 +8,10 @@ enum Collector {
         // Successful readings wait the chosen interval; failures wait at least fifteen minutes.
         let backoff = max(900, interval)
         var result: [String: Any] = [:]
-        for provider in providers where ["claude", "codex"].contains(provider) {
+        for provider in providers where ["claude", "codex", "grokbot"].contains(provider) {
             var value = previous[provider] as? [String: Any] ?? [:]
-            if let due = value["next_attempt_epoch"] as? Double,
+            // Grok Bot is one small local file, so it is read on every check (once a minute) with no waiting after a miss.
+            if provider != "grokbot", let due = value["next_attempt_epoch"] as? Double,
                due > now.timeIntervalSince1970, !(force && value["refresh_status"] as? String == "ok"),
                due <= now.timeIntervalSince1970 + (value["refresh_status"] as? String == "ok" ? interval : backoff) { result[provider] = value; continue }
             let stamp = UsageReader.iso(now)
@@ -21,7 +22,7 @@ enum Collector {
                 value["refresh_status"] = "ok"; value["last_success_at"] = reading["observed_at"]
                 value.removeValue(forKey: "failure_reason"); value["next_attempt_epoch"] = now.timeIntervalSince1970+interval
             } catch {
-                let allowed = ["cli_update_required", "sign_in_required", "interactive_setup_required", "cli_unavailable", "rate_limited", "usage_read_timed_out", "usage_panel_incomplete", "reset_format_changed", "reset_out_of_range", "invalid_usage", "terminal_bounds", "output_too_large", "unavailable"]
+                let allowed = ["cli_update_required", "sign_in_required", "interactive_setup_required", "cli_unavailable", "rate_limited", "usage_read_timed_out", "usage_panel_incomplete", "reset_format_changed", "reset_out_of_range", "invalid_usage", "terminal_bounds", "output_too_large", "feed_missing", "unavailable"]
                 let reason = (error as? ReaderFailure)?.reason ?? "unavailable"
                 value["refresh_status"] = "failed"; value["last_failure_at"] = stamp
                 value["failure_reason"] = allowed.contains(reason) ? reason : "unavailable"
@@ -46,7 +47,8 @@ enum Collector {
         if let attributes = try? FileManager.default.attributesOfItem(atPath: probe.path), attributes[.type] as? FileAttributeType == .typeSymbolicLink { throw ReaderFailure("unavailable") }
         try FileManager.default.createDirectory(at: probe, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let result = collect(previous: previous, providers: providers, now: Date(), interval: interval, force: force) { provider in
-            try provider == "claude" ? UsageReader.claude(directory: probe) : UsageReader.codex(directory: probe)
+            // Grok Bot is one small file another app writes; nothing is started for it.
+            try provider == "grokbot" ? UsageReader.grokBot() : provider == "claude" ? UsageReader.claude(directory: probe) : UsageReader.codex(directory: probe)
         }
         var saved = result; saved["_generation"] = generation
         try JSONSerialization.data(withJSONObject: saved, options: [.sortedKeys]).write(to: file, options: .atomic)
