@@ -169,6 +169,9 @@ import UniformTypeIdentifiers
     static func changed(_ old: WidgetStatus?, _ new: WidgetStatus?) -> Bool {
         WidgetStatus.providers.contains { provider in
             let a = old?.usage?[provider], b = new?.usage?[provider]
+            // Grok Bot's file is read on every one-minute check, so its attempt time always moves; only a new reading
+            // or a changed outcome redraws, keeping within macOS's widget reload budget.
+            if provider == "grokbot" { return a?.observedAt != b?.observedAt || a?.refresh?.status != b?.refresh?.status || a?.refresh?.failureReason != b?.refresh?.failureReason }
             return a?.observedAt != b?.observedAt || a?.refresh?.status != b?.refresh?.status || a?.refresh?.lastAttemptAt != b?.refresh?.lastAttemptAt
         }
     }
