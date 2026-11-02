@@ -1,5 +1,19 @@
 # Validation record
 
+## 1.3.2 (build 34) — 11/2/2026, local release preparation
+
+Version retained because neither local/remote tags nor the GitHub release list contained 1.3.2; latest full release was 1.3.1. Local main fast-forwarded to the already-pushed dfaba27 before release work. App/extension versions remain 1.3.2 / 34 and the native reader client version matches.
+
+`bash scripts/test.sh`: 18 Python tests passed; native history/store and reader/collector/updater checks passed, including Grok Bot parsing, retention and unchanged-reading behavior. Signed arm64 build passed. Existing compiler deprecation and redundant-try warnings remain; no test or build failure.
+
+Apple submission `69f0721f-2646-40df-bdad-412d90783c7b` Accepted. Staple and `stapler validate` succeeded; deep/strict signature verification and `spctl --assess --type execute --verbose=2` accepted the app as Notarized Developer ID. Repeated these checks on the app extracted from the final ZIP: all passed. ZIP SHA-256 `22bcd2a5c1ad634e9a6e0b8f33de1f563150f737ebf5b48290deb5558fdfc499`.
+
+The installed Settings window was visually inspected at the top and bottom: version 1.3.2, all three accounts Connected, Grok Bot small-reading selection, no shared-limit text. The timeline receipt records build 34 and all three provider observation timestamps. This receipt proves a timeline read, not a visible repaint. The existing screen tool only exposes individual app windows and selected Notification Center windows; both complete displays and every installed widget size/style could not be inspected. That direct comparison remains a handoff check.
+
+Regenerated and visually inspected all eight `docs/images` PNGs: overview, Bars and Solar small/medium/large, and Settings. Production SwiftUI views use real current account readings and settings; Grok Bot also passes through the production local-feed reader. Pictures show Claude weekly 6% used, Fable 3%, Codex weekly 76%, Grok Bot weekly 29%; these account plans expose four readings. No made-up five-hour readings were added to claim six-row visual validation. Settings uses a completed-setup state only in the generated scratch source; running app preferences are unchanged. All PNG metadata is stripped. Scratch render and verification files/logs stay in ignored `build/`.
+
+Source export includes the previously omitted Grok Bot feed documentation, renderer and script, plus all new images and release notes. Its allowlist/privacy checks and ZIP integrity verification pass. The local update-feed fixture is parsed by the production updater and identifies 1.3.2 as newer than 1.3.1; no feed is published. Published-download verification, clean-Mac Grok Bot setup, and GitHub CI for the new commit remain pending. Other historical acceptance limits below still apply.
+
 ## 1.3.1 (build 33) — 10/19/2026
 
 Owner tested the click-to-show-reset on his own Mac (test builds): shows "Resets …" within about half a second, a second click goes back, names fit. Click timing filmed on a test Mac: about 0.5 s with a two-entry plan (3.5 s with the full plan). Release ZIP as a real download on a fresh test Mac: moved itself, connected ChatGPT Codex; Claude Code reported sign-in required because the test Mac's saved Claude sign-in had expired (confirmed with Claude Code itself), not an app fault. Published files downloaded back, checksums matched, Gatekeeper accepted; installed on the owner's Mac. Notarization Accepted (submission 6b10783a-0673-4823-8dd1-358205562209; app ZIP SHA-256 721768e71df5d79facde0f68f7ce84152389d9d15c664970e92e69d0c39e2cb8).

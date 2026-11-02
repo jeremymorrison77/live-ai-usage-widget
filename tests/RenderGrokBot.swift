@@ -1,9 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Debug check for the Grok Bot account: reads the real Grok Bot usage file the way the app does (Collector, then the
-/// shared store, written to a scratch file in build/), then draws every widget size in both styles and the Settings
-/// window from the app's own views. Claude Code and ChatGPT Codex rows are made-up samples; nothing else is read.
+/// Draws every widget size and Settings from current installed readings and the real Grok Bot feed.
+/// All writes stay in the build folder; account state is read-only.
 /// Run: bash scripts/render_grokbot.sh
 @main struct RenderGrokBot {
     @MainActor static func main() throws {
@@ -12,31 +11,20 @@ import SwiftUI
         let folder = URL(fileURLWithPath: CommandLine.arguments[1])
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let now = Date()
-        let hour: TimeInterval = 3600
-        // The real file, through the same path as a check in the app.
+        let store = URL(fileURLWithPath: CommandLine.arguments[3])
+        guard var status = StatusStore.load(from: store.appendingPathComponent("status.json")) else {
+            fatalError("A current installed-app snapshot is required; no sample data is substituted")
+        }
+        let settings = try JSONDecoder().decode(WidgetSettings.self, from: Data(contentsOf: store.appendingPathComponent("settings.json")))
+        // Verify the current local feed through the production reader without writing account state.
         let collected = Collector.collect(previous: [:], providers: ["grokbot"], now: now) { _ in try UsageReader.grokBot() }
         let payload = try JSONSerialization.data(withJSONObject: ["usage": collected], options: [.sortedKeys])
         let real = try StatusStore.publishUsage(input: payload, to: folder.appendingPathComponent("status.json"), enabled: ["grokbot"])
-        guard let grok = real.usage?["grokbot"], let weekly = grok.windows.first else {
-            print("Grok Bot: no reading (", (collected["grokbot"] as? [String: Any])?["failure_reason"] ?? "unknown", ")"); exit(1)
-        }
-        let format = ISO8601DateFormatter()
-        print(String(format: "Grok Bot · %@: %.1f%% used, %.1f%% left", weekly.displayName, weekly.usedPercent, weekly.leftPercent),
-              "· resets", weekly.resetsAt.map(format.string) ?? "unknown", "· updated", grok.observedAt.map(format.string) ?? "unknown",
-              "· old reading:", grok.isStale(at: now) ? "yes" : "no")
-        let ok = UsageRefresh(status: .ok, lastAttemptAt: now, lastSuccessAt: now, lastFailureAt: nil, failureReason: nil)
-        let claude = [UsageWindow(window: "5-hour", usedPercent: 38, resetsAt: now.addingTimeInterval(2.2 * hour)),
-                      UsageWindow(window: "weekly all", usedPercent: 76, resetsAt: now.addingTimeInterval(74 * hour)),
-                      UsageWindow(window: "weekly Fable", usedPercent: 41, resetsAt: now.addingTimeInterval(74 * hour))]
-        let codex = [UsageWindow(window: "5-hour", usedPercent: 18, resetsAt: now.addingTimeInterval(3.4 * hour)),
-                     UsageWindow(window: "weekly", usedPercent: 92, resetsAt: now.addingTimeInterval(118 * hour))]
-        let status = WidgetStatus(usage: ["claude": AgentUsage(observedAt: now, windows: claude, refresh: ok),
-                                          "codex": AgentUsage(observedAt: now, windows: codex, refresh: ok), "grokbot": grok])
-        var settings = WidgetSettings()
-        settings.enabled = WidgetStatus.providers
-        settings.autoDetected = true
+        guard let grok = real.usage?["grokbot"], !grok.windows.isEmpty else { fatalError("Grok Bot feed has no reading") }
+        status.usage?["grokbot"] = grok
         WidgetSettings.sample = settings
         SettingsView.sample = true
+        UsageModel.sampleVersion = CommandLine.arguments[2]
 
         func widget(_ style: String, _ size: String) -> some View {
             var copy = settings; copy.style = style

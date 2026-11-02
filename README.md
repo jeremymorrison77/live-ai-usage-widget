@@ -2,13 +2,15 @@
 
 A macOS desktop widget that shows how much of your Claude Code, ChatGPT Codex and Grok Bot usage limits are left, or how much you have used. Small, medium and large widgets come in two styles: Bars (default), which shows what is left, and Solar, rings that fill clockwise as you use your limits. Accounts and data stay on your own Mac.
 
-**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.3.1-macOS-arm64.zip)** · version 1.3.1 · macOS 14 or later · M1 or newer
+**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.3.2-macOS-arm64.zip)** · version 1.3.2 · macOS 14 or later · M1 or newer
 
 <p align="center"><img src="docs/images/overview.png" alt="Settings window and the widget in all sizes and styles" width="100%"></p>
 
-Pictures are drawn from the app's own views with made-up sample readings, not a real account.
+Pictures are drawn from the app's own views using current local readings and settings (November 2, 2026), including Grok Bot. This account exposes four readings; the small widget supports up to six when the connected plans expose them. No account identity is included.
 
-**Version 1.3.1.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
+[Bars: small](docs/images/clean-small.png) · [medium](docs/images/clean-medium.png) · [large](docs/images/clean-large.png) · [Solar: small](docs/images/solar-small.png) · [medium](docs/images/solar-medium.png) · [large](docs/images/solar-large.png) · [Settings](docs/images/settings.png)
+
+**Version 1.3.2.** Apple Silicon Macs, macOS 14 or later. Signed and notarized by Apple.
 
 ## Download and install
 
@@ -49,13 +51,14 @@ Changes apply as you make them; there is no Save button. You can close the windo
 
 - Apple Silicon Mac running macOS 14 or later. Intel Macs are not supported.
 - Claude Code 2.1.301 or newer (`claude update`) and/or ChatGPT Codex (OpenAI's official Codex command-line tool), installed and signed into **your** account. Your plan must expose usage limits through that tool. API-key-only accounts are not supported.
+- For Grok Bot, a routine that writes the [local usage file](docs/GROKBOT-FEED.md); no Claude Code or Codex installation is needed for Grok Bot alone.
 - Nothing else. Python and developer tools are only needed to build from source.
 
 No provider tools, credentials or private signing material are included.
 
 ## Known limits
 
-Tested on two Apple Silicon Macs with real Claude Code and ChatGPT Codex accounts, and on fresh macOS 15 test Macs with neither tool, either one, and both. Not yet tested: reboots and sleep over several days, sign-ins renewing on their own over time, and revoked sign-ins. See [release checks](docs/RELEASE-CHECKLIST.md).
+Tested on two Apple Silicon Macs with real Claude Code and ChatGPT Codex accounts, and on fresh macOS 15 test Macs with neither tool, either one, and both. Grok Bot is verified locally with its current feed; a fresh-Mac Grok Bot setup has not been tested. Not yet tested: reboots and sleep over several days, sign-ins renewing on their own over time, and revoked sign-ins. See [release checks](docs/RELEASE-CHECKLIST.md).
 
 ## Build and test
 
@@ -66,7 +69,7 @@ bash scripts/test.sh
 python3 scripts/build.py
 ```
 
-`bash scripts/render_overview.sh` redraws the picture above from the app's own views with sample readings.
+`bash scripts/render_overview.sh` redraws the overview from the installed app's current readings and settings. `bash scripts/render_grokbot.sh` regenerates individual views and checks the real Grok Bot feed. Both require the installed app and local data; they change only build/documentation files. The Settings render represents completed setup. Review every image before sharing it.
 
 This produces a **compile-only** app in `build/Live AI Usage Widget.app`. It is not a signed installer. Nothing is installed, launched, registered at login or stopped by these commands.
 
@@ -98,7 +101,7 @@ To uninstall: turn off Open at login, choose Quit from the menu bar icon, remove
 
 ## License
 
-This is independent software, not an Anthropic or OpenAI product. Provider names identify compatibility only.
+This is independent software, not an Anthropic, OpenAI or xAI product. Provider names identify compatibility only.
 
 Released under the [MIT License](LICENSE). See [third-party notices](THIRD-PARTY-NOTICES.md).
 

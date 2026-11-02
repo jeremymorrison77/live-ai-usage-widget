@@ -1,6 +1,8 @@
 # Grok Bot support: overnight note (11/1/2026)
 
-Done, local only (nothing pushed, tagged, notarized or released):
+Historical note from November 1. Superseded by the November 2 [release preparation record](RELEASE-1.3.2.md); the original observations below are retained.
+
+At the time, local only (nothing pushed, tagged, notarized or released):
 
 - Branch `grokbot-usage`: reviewed. One fix (d5c28b5): Grok Bot's file is read on every one-minute check, so its attempt time changed every minute and the app redrew the widget every minute, spending macOS's widget reload budget. It now redraws only on a new reading or a changed outcome. Version bumped to 1.3.2 (build 34) in ef1c8c6. At your request, all "shared with other apps" text is gone from the widget and Settings (the file field is still read, just not shown).
 - `bash scripts/test.sh` passes. Signed build with "Developer ID Application: JEREMY ALEXANDER MORRISON (7F78Q6T29S)", no keychain prompt. Not notarized (fine for this Mac; needed before sharing).

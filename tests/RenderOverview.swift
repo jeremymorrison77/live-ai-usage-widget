@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Draws docs/images/overview.png from the app's real views with made-up readings; never touches account state.
+/// Draws docs/images/overview.png from the installed app's readings and settings, read-only.
 /// Run: bash scripts/render_overview.sh
 @main struct RenderOverview {
     @MainActor static func main() throws {
@@ -10,31 +10,11 @@ import SwiftUI
         let output = URL(fileURLWithPath: CommandLine.arguments[1])
         // Readings must be fresh for accounts to show as connected.
         let now = Date()
-        let hour: TimeInterval = 3600
-        let ok = UsageRefresh(status: .ok, lastAttemptAt: now, lastSuccessAt: now, lastFailureAt: nil, failureReason: nil)
-        let claude = [UsageWindow(window: "5-hour", usedPercent: 38, resetsAt: now.addingTimeInterval(2.2 * hour)),
-                      UsageWindow(window: "weekly all", usedPercent: 76, resetsAt: now.addingTimeInterval(74 * hour)),
-                      UsageWindow(window: "weekly Fable", usedPercent: 41, resetsAt: now.addingTimeInterval(74 * hour))]
-        let codex = [UsageWindow(window: "5-hour", usedPercent: 18, resetsAt: now.addingTimeInterval(3.4 * hour)),
-                     UsageWindow(window: "weekly", usedPercent: 92, resetsAt: now.addingTimeInterval(118 * hour))]
-        // Six hours of sample history, as the app keeps.
-        var history: [String: [UsageObservation]] = [:]
-        for (agent, windows) in [("claude", claude), ("codex", codex)] {
-            for window in windows {
-                var used = max(0, window.usedPercent - 14)
-                history[UsageHistory.key(agent, window.window)] = (0...36).map { step in
-                    let date = now.addingTimeInterval(Double(step - 36) * 600)
-                    if step > 0 { used = min(window.usedPercent, used + (step % 6 < 2 ? 1.2 : 0.15)) }
-                    return UsageObservation(date: date, usedPercent: step == 36 ? window.usedPercent : used, resetsAt: window.resetsAt)
-                }
-            }
+        let store = URL(fileURLWithPath: CommandLine.arguments[3])
+        guard let status = StatusStore.load(from: store.appendingPathComponent("status.json")) else {
+            fatalError("A current installed-app snapshot is required; no sample data is substituted")
         }
-        let status = WidgetStatus(usage: ["claude": AgentUsage(observedAt: now, windows: claude, refresh: ok),
-                                          "codex": AgentUsage(observedAt: now, windows: codex, refresh: ok)], usageHistory: history)
-        var settings = WidgetSettings()
-        settings.enabled = ["claude", "codex"]
-        settings.usDates = true
-        settings.autoDetected = true
+        let settings = try JSONDecoder().decode(WidgetSettings.self, from: Data(contentsOf: store.appendingPathComponent("settings.json")))
         WidgetSettings.sample = settings
         SettingsView.sample = true
         UsageModel.sampleVersion = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : nil

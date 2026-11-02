@@ -43,6 +43,7 @@ def main():
             output.writestr(info, data)
     checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
     (destination / 'SHA256SUMS').write_text(checksum + '  ' + archive.name + '\n')
+    (destination / (archive.name + '.sha256')).write_text(checksum + '  ' + archive.name + '\n')
     with zipfile.ZipFile(archive) as check:
         if len(check.namelist()) != len(files) or check.testzip() is not None:
             raise SystemExit('Archive verification failed')

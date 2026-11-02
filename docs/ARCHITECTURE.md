@@ -1,6 +1,6 @@
 # Architecture and recovery
 
-The native companion owns collection. Its timer checks once per minute while running; the native Swift collector gates each provider independently to five minutes after success and fifteen minutes after failure. It uses a nonblocking file lock and atomic state replacement. A clock rollback cannot postpone retries indefinitely. The app requests WidgetKit reload after publication; timeline entries also age existing values without requiring a new reading.
+The native companion owns collection. Its timer checks once per minute while running; the native Swift collector gates each provider independently to five minutes after success and fifteen minutes after failure. It uses a nonblocking file lock and atomic state replacement. A clock rollback cannot postpone retries indefinitely. The app requests WidgetKit reload only when readings or refresh outcomes change (attempt timestamps alone do not trigger it); timeline entries also age existing values without requiring a new reading.
 
 Claude Code is read through its own `/usage` terminal panel in a bounded disposable working directory. It disables tools and hooks for the probe. The parser requires valid percentages and explicit reset timezones and accepts optional per-model weekly limits. Terminal output must settle before accepting it. UI changes, new CLI prompts or unsupported date formats can break parsing; failure is preferable to guessed data.
 

@@ -1,13 +1,14 @@
 # Maintainer handoff
 
-Current version: **1.3.1 (build 33), Apple Silicon, macOS 14+**, published as a full GitHub release in the public repository. This repository is the whole project; it has no parent workspace.
+Current version: **1.3.2 (build 34), Apple Silicon, macOS 14+**, prepared locally for a full GitHub release; not yet published. This repository is the whole project; it has no parent workspace.
 
 ## Current state
 
 - Name: Live AI Usage Widget. Bundle identifier `com.liveaiusagewidget.app`, widget `com.liveaiusagewidget.app.widget`, app group `TEAMID.com.liveaiusagewidget.app`, link scheme `live-ai-usage-widget://`.
 - The app is a menu bar app (no Dock icon): one iconned line per account, then Settings, Check usage now and Quit. It opens one setup window (Setup help steps, hidden once all are done with a Setup help link to show them, accounts, appearance, updates interval, small-widget readings; settings apply as they change (no Save button); Setup help toggle at the bottom once set up). There is no separate preview window. Connecting needs no Terminal: background install, browser sign-in, and automatic trust of the app's own probe folder. Bars (stored as "clean") is the default style; Solar is stored as "solar".
-- Tests, compile-only build, source export and CI pass. 1.3.1 is notarized (submission `6b10783a-0673-4823-8dd1-358205562209`), app ZIP SHA-256 `721768e71df5d79facde0f68f7ce84152389d9d15c664970e92e69d0c39e2cb8`.
-- The README picture `docs/images/overview.png` is drawn by `bash scripts/render_overview.sh` from the app's real views with sample data, then stripped of metadata. `scripts/package.py` refuses PNGs that carry metadata.
+- 1.3.2 tests, signed build, notarization, staple validation and Gatekeeper assessment pass. See [release record](RELEASE-1.3.2.md) for the submission ID and app checksum. Publication and CI for the new commit are pending.
+- The README picture and seven individual views in `docs/images/` use current local readings and settings. Both render scripts use the installed app-group data read-only, with completed setup represented only in scratch source. PNG metadata is stripped and checked by packaging.
+
 
 Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for what is still untested.
 
@@ -16,13 +17,13 @@ Read `docs/VALIDATION.md` for dated evidence and `docs/RELEASE-CHECKLIST.md` for
 1. Bump `CFBundleShortVersionString`/`CFBundleVersion` in `scripts/build.py`, the version in `Helper/Reader.swift` client info and the archive name in `scripts/package.py`. Add a CHANGELOG entry.
 2. `bash scripts/test.sh`, then a signed build: `python3 scripts/build.py --team-id TEAMID --signing-identity IDENTITY`.
 3. `python3 scripts/release.py --notary-profile PROFILE` (resume an uncertain submission with `--submission-id`; never resubmit blindly), then `python3 scripts/package.py`.
-4. Push, wait for CI, then create a GitHub prerelease with the app ZIP, source ZIP and both `.sha256` files. Download them back and verify the checksums. Give the app ZIP the asset label "Download for Mac (Apple Silicon) - Live AI Usage Widget X.Y.Z" and update the README Download for Mac link to the new file name.
+4. Push, wait for CI, then create a full GitHub release (not a prerelease) with the app ZIP, source ZIP and both `.sha256` files. Download them back and verify the checksums. Give the app ZIP the asset label "Download for Mac (Apple Silicon) - Live AI Usage Widget X.Y.Z" and update the README Download for Mac link to the new file name.
 
-Keep commits on the GitHub noreply address. Never add credentials, account screenshots or personal paths.
+Keep commits on the GitHub noreply address. Never add credentials, account identities or personal paths. Usage-only renders are approved for this release.
 
-## Unreleased: Grok Bot (grokbot-usage branch, 11/1/2026)
+## 1.3.2: Grok Bot (prepared 11/2/2026)
 
-Third provider key `grokbot` ("Grok Bot"). `WidgetStatus.providers` lists all three; `WidgetStatus.tools` only the two CLIs (install, find, sign-in, diagnostics). Helper files stay free of Shared types, so `Collector`/`Main` list the three keys themselves. `UsageReader.grokBot()` reads the feed file (docs/GROKBOT-FEED.md); `Collector.collect` never gates `grokbot`. New `AgentUsage.maximumAge` (3 h for Grok Bot) and `sharedWithOtherApps` (parsed, never shown: the owner asked for no shared-limit text), both carried through `merged`. New failure reason `feed_missing`. Medium layout: `columns` puts accounts 2 and 3 in the second column. Small widget cap 6. `bash scripts/render_grokbot.sh` draws all widgets and Settings with the real feed file into build/grokbot-preview/. Not yet checked as a live desktop widget (needs a signed build).
+Third provider key `grokbot` ("Grok Bot"). `WidgetStatus.providers` lists all three; `WidgetStatus.tools` only the two CLIs (install, find, sign-in, diagnostics). Helper files stay free of Shared types, so `Collector`/`Main` list the three keys themselves. `UsageReader.grokBot()` reads the feed file (docs/GROKBOT-FEED.md); `Collector.collect` never gates `grokbot`. New `AgentUsage.maximumAge` (3 h for Grok Bot) and `sharedWithOtherApps` (parsed, never shown: the owner asked for no shared-limit text), both carried through `merged`. New failure reason `feed_missing`. Medium layout: `columns` puts accounts 2 and 3 in the second column. Small widget cap 6. `bash scripts/render_grokbot.sh` draws all widgets and Settings with the real feed file into build/grokbot-preview/. The installed build 34 Settings panel is checked live; complete desktop size/style comparison remains unverified. See VALIDATION.md.
 
 ## 1.3.1 (10/19/2026)
 

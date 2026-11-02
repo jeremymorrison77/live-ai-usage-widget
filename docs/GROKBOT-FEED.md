@@ -33,3 +33,5 @@ Keep the file under 16 KB. Write it in one step (write a temporary file in the s
 - Settings > Accounts shows Grok Bot as Connected while the file is there and `updatedAt` is under 3 hours old. Otherwise it says "No usage file yet", "Reading is over 3 hours old" or "Couldn't read usage file", with a Try Again button. Disconnect only hides Grok Bot.
 - A reading older than 3 hours fades and reads "Old reading" on the widget, like other old readings. Writing hourly leaves room for two missed writes.
 - A file that is missing or unreadable keeps the last good reading, which then ages as usual.
+
+The one-minute file check does not itself redraw the widget. A new reading or changed outcome triggers the redraw; unchanged attempt times do not spend the widget reload budget.
