@@ -493,6 +493,11 @@ struct MenuContent: View {
                 Button { open(); model.connect(provider) } label: { Label(name + " · Connect", systemImage: "person.crop.circle") }
             }
         }
+        if model.settings.enabled.contains("grokbot"), let usage = model.status?.usage?["grokbot"] {
+            ForEach(usage.grokMenuLines(at: Date()), id: \.self) { line in
+                Button { open() } label: { Label(line, systemImage: "chart.bar") }
+            }
+        }
         Divider()
         Button { open() } label: { Label("Settings…", systemImage: "gearshape") }
         Button { model.refresh(force: true) } label: { Label(model.checkingUsage ? "Checking usage…" : "Check usage now", systemImage: model.checkingUsage ? "hourglass" : "arrow.clockwise") }

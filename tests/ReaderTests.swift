@@ -124,6 +124,13 @@ import Darwin
         // Grok Bot: a small file a Grok Bot routine writes hourly; read on every check, never gated or started.
         let feed = Data(#"{"source":"grokbot","plan":"Ultra","weekly":{"usedPercent":7.2,"resetsAt":"2026-11-08T16:23:00Z","sharedWithOtherApps":true},"updatedAt":"2026-11-01T21:20:00Z"}"#.utf8)
         let grok = try UsageReader.grokBotReading(feed)
+        precondition(grok["credits_usd"] == nil)
+        for (raw, expected) in [("300.0", 300.0), ("0", 0.0), ("-1", nil), ("true", nil), ("\"300\"", nil), ("1e100", nil), ("null", nil)] as [(String, Double?)] {
+            let json = #"{"source":"grokbot","weekly":{"usedPercent":100},"updatedAt":"2026-11-01T21:20:00Z","creditsUSD":"# + raw + "}"
+            let reading = try UsageReader.grokBotReading(Data(json.utf8))
+            precondition(reading["credits_usd"] as? Double == expected)
+            precondition((reading["windows"] as! [[String: Any]])[0]["used_percent"] as? Double == 100)
+        }
         let grokWindow = (grok["windows"] as! [[String: Any]])[0]
         precondition(grokWindow["window"] as? String == "weekly" && grokWindow["used_percent"] as? Double == 7.2)
         precondition(grokWindow["resets_at"] as? String == "2026-11-08T16:23:00Z" && grok["observed_at"] as? String == "2026-11-01T21:20:00Z")

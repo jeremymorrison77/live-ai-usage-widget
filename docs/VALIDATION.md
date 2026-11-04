@@ -1,5 +1,15 @@
 # Validation record
 
+## Grok additional-usage credits — 11/4/2026, local only
+
+`bash scripts/test.sh`: 18 Python tests and native history/store and reader/collector/updater checks passed. Added checks for present/absent/zero/negative/string/boolean/null/huge credits; exhausted weekly with and without credits; credits hidden below the limit and for other providers; dollar depletion; stale menu labels; status.json publication/round-trip; failed-check retention and clearing an omitted balance in a newer good reading.
+
+Signed arm64 local build and deep/strict signature verification succeeded using the requested Developer ID identity. The sandbox initially reported no signing identities; checking outside the sandbox found the identity and signing succeeded. Existing compiler deprecation and redundant-try warnings remain.
+
+Synthetic production-view renders were visually checked for Bars and Solar, small/medium/large, with both used/left settings (12 combinations). They include all six weekly/session/model readings plus the seventh credits row. Weekly shows 0%, its fill follows the setting, and $300.00 is readable. Renderer: `tests/RenderCredits.swift`; compile it with Shared/Status.swift, Shared/Settings.swift and Shared/StatusView.swift, then run `build/render-credits`. Evidence and logs remain in ignored `build/credits-preview/` and `build/credits-*.log`.
+
+Not tested live: installed desktop WidgetKit repaint, menu interaction, actual changing feed balances, stale appearance on a running desktop, or both physical displays. No installation, notarization, publication, remote push, feed-writer change or network integration was performed. Version remains 1.3.2/build 34; this is an unreleased local change.
+
 ## 1.3.2 (build 34) — 11/2/2026, local release preparation
 
 Version retained because neither local/remote tags nor the GitHub release list contained 1.3.2; latest full release was 1.3.1. Local main fast-forwarded to the already-pushed dfaba27 before release work. App/extension versions remain 1.3.2 / 34 and the native reader client version matches.

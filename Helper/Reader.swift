@@ -514,8 +514,15 @@ extension UsageReader {
             guard let resets = date(reset) else { throw ReaderFailure("reset_format_changed") }
             window["resets_at"] = iso(resets)
         }
-        return ["status": "ok", "observed_at": iso(updated), "windows": [window],
+        var result: [String: Any] = ["status": "ok", "observed_at": iso(updated), "windows": [window],
                 "shared_with_other_apps": weekly["sharedWithOtherApps"] as? Bool == true,
                 "maximum_age_seconds": grokBotMaximumAge]
+        // Optional extras must never invalidate an otherwise good weekly reading.
+        if let credits = value["creditsUSD"] as? NSNumber,
+           CFGetTypeID(credits) != CFBooleanGetTypeID(), credits.doubleValue.isFinite,
+           (0...1_000_000_000).contains(credits.doubleValue) {
+            result["credits_usd"] = credits.doubleValue
+        }
+        return result
     }
 }

@@ -93,6 +93,34 @@ struct UsageHistoryTests {
         precondition(grokFailed.windows.count == 1)
         let unshared = try StatusStore.publishUsage(input: grok(now, 9, shared: false), to: grokDestination, enabled: ["grokbot"])
         precondition(unshared.usage!["grokbot"]!.sharedWithOtherApps == false)
+        var exhausted = AgentUsage(observedAt: now, windows: [UsageWindow(window: "weekly", usedPercent: 100, resetsAt: now.addingTimeInterval(86400))], maximumAge: 10800, creditsUSD: 300)
+        precondition(exhausted.exhaustedWeekly("grokbot", exhausted.windows[0]))
+        precondition(!exhausted.exhaustedWeekly("codex", exhausted.windows[0]))
+        precondition(exhausted.creditsLabel(for: "grokbot") == "$300.00")
+        precondition(exhausted.creditsLabel(for: "codex") == nil)
+        var belowLimit = grokUsage
+        belowLimit.creditsUSD = 300
+        precondition(belowLimit.creditsLabel(for: "grokbot") == nil)
+        var zeroCredits = exhausted
+        zeroCredits.creditsUSD = 0
+        precondition(zeroCredits.creditsLabel(for: "grokbot") == "$0.00")
+        precondition(exhausted.grokMenuLines(at: now) == ["Grok Bot · Weekly 0% left", "Grok credits · $300.00"])
+        precondition(exhausted.grokMenuLines(at: now.addingTimeInterval(10800)).allSatisfy { $0.contains("old reading") })
+        let roundTrip = try JSONDecoder().decode(AgentUsage.self, from: JSONEncoder().encode(exhausted))
+        precondition(roundTrip.creditsUSD == 300)
+        let kept = StatusStore.merged(["grokbot": exhausted], ["grokbot": AgentUsage(observedAt: nil, windows: [])])["grokbot"]!
+        precondition(kept.creditsUSD == 300 && kept.observedAt == now)
+        exhausted.creditsUSD = 250.75
+        precondition(StatusStore.merged(["grokbot": kept], ["grokbot": exhausted])["grokbot"]!.creditsLabel(for: "grokbot") == "$250.75")
+        exhausted.creditsUSD = nil
+        precondition(exhausted.grokMenuLines(at: now) == ["Grok Bot · Weekly 0% left"])
+        precondition(StatusStore.merged(["grokbot": kept], ["grokbot": exhausted])["grokbot"]!.creditsUSD == nil)
+        var payload = try JSONSerialization.jsonObject(with: grok(now, 100)) as! [String: Any]
+        var providers = payload["usage"] as! [String: [String: Any]]
+        providers["grokbot"]!["credits_usd"] = 123.45
+        payload["usage"] = providers
+        let creditsStatus = try StatusStore.publishUsage(input: JSONSerialization.data(withJSONObject: payload), to: grokDestination, enabled: ["grokbot"])
+        precondition(creditsStatus.usage?["grokbot"]?.creditsUSD == 123.45)
         // Turning Grok Bot off hides it; unknown accounts are still dropped from settings.
         let hidden = try StatusStore.publishUsage(input: grok(now, 9), to: grokDestination, enabled: ["claude"])
         precondition(hidden.usage?["grokbot"] == nil)

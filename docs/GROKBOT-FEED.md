@@ -24,6 +24,7 @@ Only the app reads this file, and the app is not sandboxed, so it can read it in
 - `weekly.sharedWithOtherApps`: whether the limit is shared with other apps on the plan. Optional; read and kept but not shown anywhere.
 - `updatedAt`: when the reading was taken, ISO 8601 with a time zone. Required.
 - `plan`: kept for reference; not shown.
+- `creditsUSD`: optional top-level number, USD remaining in additional usage credits, never negative. Accepted range: 0 through 1,000,000,000; missing, invalid or out-of-range values are ignored without losing the weekly reading. Example: `"creditsUSD":300.0`.
 
 Keep the file under 16 KB. Write it in one step (write a temporary file in the same folder, then rename it over this one) so the app never reads half a file.
 
@@ -35,3 +36,5 @@ Keep the file under 16 KB. Write it in one step (write a temporary file in the s
 - A file that is missing or unreadable keeps the last good reading, which then ages as usual.
 
 The one-minute file check does not itself redraw the widget. A new reading or changed outcome triggers the redraw; unchanged attempt times do not spend the widget reload budget.
+
+At 100% weekly usage, the weekly number shows **0% left** in both styles (the bar or ring still follows the used/left setting). When credits are known, a separate **Grok credits** row shows the remaining dollars to two decimal places. There is no credit percentage or invented starting balance. Below 100%, the widget keeps its normal weekly display and hides credits. Credits fade with the same reading after three hours; a failed check retains the previous reading and balance. The menu also shows weekly usage and, when exhausted, known credits.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Grok Bot now accepts optional additional-usage credits. Once weekly usage reaches 100%, every widget style and size shows weekly at 0% left and a separate dollar balance when known. Bars and rings retain their used/left setting. Credits share the reading’s stale state, and the menu shows weekly usage and credits. Older feed files remain supported.
+
 ## 1.3.2
 
 Grok Bot is a third account. It shows one reading, Weekly, as left or used like the others, with its reset time. Grok Bot has no tool to sign in to: a Grok Bot routine writes a small file each hour and the app reads it during its normal check (see docs/GROKBOT-FEED.md). Its readings fade after 3 hours. Settings > Accounts, the menu bar list and Small widget readings include it; Disconnect only hides it. The medium widget puts ChatGPT Codex and Grok Bot in the second column. The small widget now shows up to six readings. The widget redraws only when a reading or its outcome changes, rather than on every one-minute check of the same Grok Bot file. Removed all shared-with-other-apps text from the widget and Settings; the optional feed field remains supported.

@@ -40,7 +40,7 @@ struct UsageStatusView: View {
     }
     /// Medium widget: two columns. With three accounts, the first has its own column and the others share the second.
     private var columns: [[String]] { agents.count <= 2 ? agents.map { [$0] } : [[agents[0]], Array(agents.dropFirst())] }
-    private func rowCount(_ column: [String]) -> Int { column.reduce(0) { $0 + shown($1).count } }
+    private func rowCount(_ column: [String]) -> Int { column.reduce(0) { $0 + shown($1).count + (credits($1) == nil ? 0 : 1) } }
     private func loading(_ agent: String) -> Bool { status?.usage?[agent]?.windows.isEmpty ?? true }
     private func windows(_ agent: String) -> [UsageWindow] {
         guard loading(agent) else { return status?.usage?[agent]?.windows ?? [] }
@@ -55,7 +55,11 @@ struct UsageStatusView: View {
             .prefix(6)
         return all.filter { $0.0 == agent }.map { $0.1 }
     }
-    private var count: Int { agents.reduce(0) { $0 + shown($1).count } }
+    private func credits(_ agent: String) -> String? {
+        guard shown(agent).contains(where: { $0.window == "weekly" }) else { return nil }
+        return status?.usage?[agent]?.creditsLabel(for: agent)
+    }
+    private var count: Int { agents.reduce(0) { $0 + shown($1).count + (credits($1) == nil ? 0 : 1) } }
     private var roomy: Bool { compact && count <= 3 }
 
     var body: some View {
@@ -101,6 +105,8 @@ struct UsageStatusView: View {
             let checking = phase != .shown
             // What the bar, ring and number show: what's left, or what's used. Colors always follow what's left.
             let value = settings.showsUsed() ? window.usedPercent : window.leftPercent
+            let exhausted = status?.usage?[agent]?.exhaustedWeekly(agent, window) == true
+            let number = exhausted ? 0 : value
             let left = waiting || phase == .empty ? 0 : value
             let visible = phase == .shown ? 1.0 : 0.0
             // Widgets allow up to two seconds of animation; growth uses all of it, slowing to a stop. Only growth moves.
@@ -136,9 +142,9 @@ struct UsageStatusView: View {
                     // Swap at once, with no fade, so a click shows the reset time as soon as macOS redraws.
                     .transition(.identity).transaction { $0.animation = nil; $0.disablesAnimations = true }
                     Spacer(minLength: 1)
-                    Text(waiting || checking ? "…" : "\(Int(value.rounded()))%")
+                    Text(waiting || checking ? "…" : "\(Int(number.rounded()))%")
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
-                        .accessibilityLabel("\(Int(value.rounded()))% " + (settings.showsUsed() ? "used" : "left"))
+                        .accessibilityLabel("\(Int(number.rounded()))% " + (exhausted || !settings.showsUsed() ? "left" : "used"))
                         .contentTransition(.numericText(value: left)).animation(grow ?? fade, value: left)
                 }.font(.system(size: nameSize))
                 if settings.style == "clean" {
@@ -164,6 +170,23 @@ struct UsageStatusView: View {
             // Rows share the height evenly, up to a comfortable spacing; with only a few readings they stay at the top.
             .frame(maxHeight: compact ? .infinity : large ? 80 : 55)
             .accessibilityElement(children: .combine)
+        }
+        if let amount = credits(agent) {
+            let old = status?.usage?[agent]?.isStale(at: date) == true
+                || windows(agent).contains(where: { $0.resetsAt.map { $0 <= date } == true })
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 3) {
+                    Text("Grok credits")
+                    Spacer(minLength: 1)
+                    Text(status?.checking(at: date) == true ? "…" : amount).monospacedDigit().fontWeight(.medium)
+                }.font(.system(size: nameSize)).lineLimit(1).minimumScaleFactor(0.6)
+                    .fixedSize(horizontal: false, vertical: true)
+                if old && !compact { Text("Old reading").font(.system(size: 10)).foregroundStyle(.secondary) }
+            }
+            .opacity(old ? 0.55 : 1)
+            .frame(maxHeight: compact ? .infinity : large ? 80 : 55)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Grok credits " + amount + " left" + (old ? ", old reading" : ""))
         }
     }
 

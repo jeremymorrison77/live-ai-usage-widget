@@ -122,12 +122,29 @@ struct AgentUsage: Codable {
     var sharedWithOtherApps: Bool? = nil
     /// How old a reading may get before it fades, when the account sets its own (Grok Bot's file is written hourly: 3 hours).
     var maximumAge: TimeInterval? = nil
+    var creditsUSD: Double? = nil
     // Readings fade after 45 minutes, or later when checks are spaced further apart.
     static var staleAfter: TimeInterval { max(45 * 60, Double(WidgetSettings.load().refreshMinutes) * 90) }
 
     func isStale(at date: Date) -> Bool {
         guard let observedAt else { return true }
         return date.timeIntervalSince(observedAt) >= (maximumAge ?? AgentUsage.staleAfter) || observedAt.timeIntervalSince(date) > 30
+    }
+    func exhaustedWeekly(_ provider: String, _ window: UsageWindow) -> Bool {
+        provider == "grokbot" && window.window == "weekly" && window.usedPercent == 100
+    }
+    func creditsLabel(for provider: String) -> String? {
+        guard windows.contains(where: { exhaustedWeekly(provider, $0) }),
+              let creditsUSD, creditsUSD.isFinite, (0...1_000_000_000).contains(creditsUSD) else { return nil }
+        return String(format: "$%.2f", locale: Locale(identifier: "en_US_POSIX"), creditsUSD)
+    }
+    func grokMenuLines(at date: Date) -> [String] {
+        guard let weekly = windows.first(where: { $0.window == "weekly" }) else { return [] }
+        let old = isStale(at: date) || weekly.resetsAt.map { $0 <= date } == true
+        let suffix = old ? " (old reading)" : ""
+        let weeklyText = weekly.usedPercent == 100 ? "0% left" : "\(Int(weekly.usedPercent.rounded()))% used"
+        return ["Grok Bot · Weekly " + weeklyText + suffix]
+            + (creditsLabel(for: "grokbot").map { ["Grok credits · " + $0 + suffix] } ?? [])
     }
     static func resetLabel(_ reset: Date, at date: Date, calendar: Calendar = .current) -> String {
         let formatter = DateFormatter()
@@ -321,6 +338,7 @@ struct UsageInputModel {
         let failure_reason: String?
         let shared_with_other_apps: Bool?
         let maximum_age_seconds: Double?
+        let credits_usd: Double?
 
         var refresh: UsageRefresh? {
             guard let rawStatus = refresh_status, let status = UsageRefreshStatus(rawValue: rawStatus) else { return nil }
@@ -347,7 +365,8 @@ struct UsageInputModel {
             if !windows.isEmpty || input.refresh != nil {
                 result[name] = AgentUsage(observedAt: windows.isEmpty ? nil : UsageInputModel.parseDate(input.observed_at),
                     windows: windows, refresh: input.refresh, sharedWithOtherApps: input.shared_with_other_apps,
-                    maximumAge: input.maximum_age_seconds.flatMap { $0.isFinite && $0 > 0 ? $0 : nil })
+                    maximumAge: input.maximum_age_seconds.flatMap { $0.isFinite && $0 > 0 ? $0 : nil },
+                    creditsUSD: input.credits_usd.flatMap { $0.isFinite && (0...1_000_000_000).contains($0) ? $0 : nil })
             }
         }
         return result
@@ -450,7 +469,8 @@ enum StatusStore {
                 result[key] = AgentUsage(observedAt: useReading ? value.observedAt : previous?.observedAt,
                     windows: useReading ? value.windows : previous?.windows ?? [], refresh: refresh,
                     sharedWithOtherApps: useReading ? value.sharedWithOtherApps : previous?.sharedWithOtherApps,
-                    maximumAge: value.maximumAge ?? previous?.maximumAge)
+                    maximumAge: value.maximumAge ?? previous?.maximumAge,
+                    creditsUSD: useReading ? value.creditsUSD : previous?.creditsUSD)
             }
         }
         return result
