@@ -188,12 +188,12 @@ struct UsageStatusView: View {
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     if solar && !large && !compact {
-                        creditsTitle
+                        creditsTitle.font(.system(size: nameSize))
                         Text(status?.checking(at: date) == true ? "…" : amount)
                             .font(.system(size: nameSize)).foregroundStyle(color).monospacedDigit()
                             .lineLimit(1).minimumScaleFactor(0.6)
                     } else {
-                        HStack(spacing: 3) {
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
                             creditsTitle
                             Spacer(minLength: 1)
                             Text(status?.checking(at: date) == true ? "…" : amount)
@@ -220,10 +220,14 @@ struct UsageStatusView: View {
     }
 
     private var creditsTitle: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text("Grok").font(.system(size: nameSize))
-            Text(" · Credits").font(.system(size: labelSize))
-        }.foregroundStyle(.primary).lineLimit(1)
+        // Match the weekly title: inherit the name font outside the group,
+        // and set the smaller suffix font directly on its Text.
+        Group {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("Grok")
+                Text(" · " + "Credits").font(.system(size: labelSize))
+            }.foregroundStyle(.primary).lineLimit(1)
+        }
     }
 
     /// One name size per widget, chosen so the longest name ("ChatGPT Codex · week") fits beside its ring or number.

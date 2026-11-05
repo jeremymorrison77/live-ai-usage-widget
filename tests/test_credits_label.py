@@ -7,8 +7,9 @@ class CreditsLabelTests(unittest.TestCase):
         source = (Path(__file__).resolve().parents[1] / "Shared/StatusView.swift").read_text()
         title = source.split("private var creditsTitle: some View {", 1)[1].split("/// One name size", 1)[0]
         self.assertIn('HStack(alignment: .firstTextBaseline, spacing: 0)', title)
-        self.assertIn('Text("Grok").font(.system(size: nameSize))', title)
-        self.assertIn('Text(" · Credits").font(.system(size: labelSize))', title)
+        self.assertIn("Group {", title)
+        self.assertIn('Text("Grok")', title)
+        self.assertIn('Text(" · " + "Credits").font(.system(size: labelSize))', title)
         layouts = source.split("if let amount = credits(agent)", 1)[1].split("private var creditsTitle", 1)[0]
         self.assertEqual(layouts.count("creditsTitle"), 2)
         self.assertNotIn('Text("Grok credits")', layouts)

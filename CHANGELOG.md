@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.5 (build 37)
+
+- Match Grok · Credits to weekly row typography, keeping the visible middle dot and Credits at the smaller secondary size.
+
 ## 1.3.4 (build 36)
 
 - Fix Grok credits fill to show remaining / purchased credits: $295.64 of $300 is 98.55%.
