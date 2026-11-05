@@ -39,8 +39,30 @@ import Foundation
         check(usage.creditsLabel(for: "grokbot") == "$295.64")
         check(usage.grokMenuLines(at: now, showsUsed: true)[0].contains("100% used"))
         check(usage.grokMenuLines(at: now, showsUsed: false)[0].contains("0% left"))
+        check(usage.grokMenuLines(at: now, showsUsed: false)[1] == "Grok · Credits · $295.64")
         let balance = usage.grokCredits!
-        check(abs(balance.fraction! - 295.64 / 600.01) < 0.000001)
+        check(balance.fraction == nil) // Spending must never invent a denominator.
+        func decoded(_ overrides: [String: Any]) throws -> GrokCredits {
+            let reading = try UsageReader.grokCreditsReading(json(overrides))
+            return try JSONDecoder().decode(GrokCredits.self, from: JSONSerialization.data(withJSONObject: reading))
+        }
+        let purchased = try decoded(["creditsPurchasedUSD": 300, "monthlyLimitUSD": 1000])
+        check(purchased.creditsPurchasedUSD == 300)
+        check(abs(purchased.fraction! - 295.64 / 300) < 0.000001)
+        check(try! decoded(["creditsPurchasedUSD": 300, "usedThisMonthUSD": 0]).fraction == purchased.fraction)
+        check(try! decoded(["creditsPurchasedUSD": 300, "usedThisMonthUSD": 9999]).fraction == purchased.fraction)
+        check(try! decoded(["monthlyLimitUSD": 600]).fraction == 295.64 / 600)
+        check(try! decoded(["creditsPurchasedUSD": 0, "monthlyLimitUSD": 600]).fraction == 295.64 / 600)
+        check(try! decoded(["creditsPurchasedUSD": NSNull(), "monthlyLimitUSD": 600]).fraction == 295.64 / 600)
+        check(try! decoded(["creditsPurchasedUSD": 0, "monthlyLimitUSD": 0]).fraction == nil)
+        check(try! decoded(["creditsPurchasedUSD": NSNull()]).fraction == nil)
+        check(try! decoded(["creditsPurchasedUSD": 100]).fraction == 1)
+        check(try! decoded(["creditsPurchasedUSD": 300, "creditsAvailableUSD": 0]).fraction == 0)
+        check(try! JSONDecoder().decode(GrokCredits.self, from: JSONEncoder().encode(purchased)) == purchased)
+        for invalid: Any in [-1, true, "300", [], [:]] {
+            check((try? UsageReader.grokCreditsReading(json(["creditsPurchasedUSD": invalid]))) == nil)
+        }
+        check((try? UsageReader.grokCreditsReading(Data(String(decoding: valid, as: UTF8.self).replacingOccurrences(of: "304.37", with: "1e999").replacingOccurrences(of: "usedThisMonthUSD", with: "creditsPurchasedUSD").utf8))) == nil)
         check(!balance.isStale(at: now.addingTimeInterval(28800)))
         check(balance.isStale(at: now.addingTimeInterval(28801)))
         for (amount, level): (Double, UsageLevel) in [(100, .normal), (99.99, .warning), (25, .warning), (24.99, .critical), (0, .critical)] {

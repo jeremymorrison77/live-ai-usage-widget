@@ -104,7 +104,7 @@ struct UsageHistoryTests {
         var zeroCredits = exhausted
         zeroCredits.creditsUSD = 0
         precondition(zeroCredits.creditsLabel(for: "grokbot") == "$0.00")
-        precondition(exhausted.grokMenuLines(at: now) == ["Grok Bot · Weekly 0% left", "Grok credits · $300.00"])
+        precondition(exhausted.grokMenuLines(at: now) == ["Grok Bot · Weekly 0% left", "Grok · Credits · $300.00"])
         precondition(exhausted.grokMenuLines(at: now.addingTimeInterval(10800)).allSatisfy { $0.contains("old reading") })
         let roundTrip = try JSONDecoder().decode(AgentUsage.self, from: JSONEncoder().encode(exhausted))
         precondition(roundTrip.creditsUSD == 300)

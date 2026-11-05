@@ -522,7 +522,7 @@ extension UsageReader {
         }
         _ = try number("creditsAvailableUSD", required: true)
         guard let used = try number("weeklyUsedPercent", required: true), used <= 100 else { throw ReaderFailure("invalid_usage") }
-        for key in ["usedThisMonthUSD", "monthlyLimitUSD", "burn24hUSD"] { _ = try number(key) }
+        for key in ["creditsPurchasedUSD", "usedThisMonthUSD", "monthlyLimitUSD", "burn24hUSD"] { _ = try number(key) }
         for key in ["updatedAt", "weeklyResetsAt"] {
             guard let stamp = value[key] as? String, stamp.hasSuffix("Z"), let parsed = date(stamp),
                   key != "updatedAt" || parsed <= Date().addingTimeInterval(30) else { throw ReaderFailure("invalid_usage") }

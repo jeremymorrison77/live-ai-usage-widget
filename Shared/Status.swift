@@ -117,6 +117,7 @@ struct UsageRefresh: Codable {
 /// Independent balance observation copied by the app into its shared snapshot.
 struct GrokCredits: Codable, Equatable {
     let creditsAvailableUSD: Double
+    var creditsPurchasedUSD: Double? = nil
     let usedThisMonthUSD: Double?
     let monthlyLimitUSD: Double?
     let burn24hUSD: Double?
@@ -127,8 +128,7 @@ struct GrokCredits: Codable, Equatable {
         return now.timeIntervalSince(date) > 8 * 3600 || date.timeIntervalSince(now) > 30
     }
     var fraction: Double? {
-        let total = monthlyLimitUSD ?? usedThisMonthUSD.map { creditsAvailableUSD + $0 }
-        guard let total, total.isFinite, total > 0 else { return nil }
+        guard let total = [creditsPurchasedUSD, monthlyLimitUSD].compactMap({ $0 }).first(where: { $0.isFinite && $0 > 0 }) else { return nil }
         return min(1, max(0, creditsAvailableUSD / total))
     }
     var level: UsageLevel { creditsAvailableUSD < 25 ? .critical : creditsAvailableUSD < 100 ? .warning : .normal }
@@ -166,7 +166,7 @@ struct AgentUsage: Codable {
         let suffix = old ? " (old reading)" : ""
         let weeklyText = showsUsed ? "\(Int(weekly.usedPercent.rounded()))% used" : weekly.leftLabel
         return ["Grok Bot · Weekly " + weeklyText + suffix]
-            + (creditsLabel(for: "grokbot").map { ["Grok credits · " + $0 + (creditsAreStale(at: date) ? " (old reading)" : "")] } ?? [])
+            + (creditsLabel(for: "grokbot").map { ["Grok · Credits · " + $0 + (creditsAreStale(at: date) ? " (old reading)" : "")] } ?? [])
     }
     func creditsAreStale(at date: Date) -> Bool {
         grokCredits?.isStale(at: date) ?? isStale(at: date)

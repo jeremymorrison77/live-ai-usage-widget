@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.4 (build 36)
+
+- Fix Grok credits fill to show remaining / purchased credits: $295.64 of $300 is 98.55%.
+- Accept optional nonnegative `creditsPurchasedUSD`; fall back to a positive monthly limit, otherwise show the amount only. Monthly spending never determines fill.
+- Match the other row titles with **Grok · Credits**, using the smaller secondary font for Credits.
+- Preserve dollar labels, burn rate, colours and the eight-hour stale rule.
+
 ## 1.3.3 (build 35)
 
 Read the independent Grok Bot credits file on each minute check. Exhausted weekly usage respects the used/left setting and reveals a live dollar balance, optional daily burn, and a depleting bar or ring when a denominator is known. Credits use dollar-based colour thresholds and their own eight-hour stale warning. The newer feed determines weekly usage; invalid or missing credits never interrupt the original feed. Menu lines match the widget amounts.

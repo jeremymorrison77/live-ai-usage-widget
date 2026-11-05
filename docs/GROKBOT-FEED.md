@@ -48,17 +48,20 @@ The app also reads this independent file on the same once-a-minute check:
 ```
 
 ```json
-{"source":"grokbot-credits","creditsAvailableUSD":295.64,"usedThisMonthUSD":304.37,"monthlyLimitUSD":null,"weeklyUsedPercent":100,"weeklyResetsAt":"2026-11-08T16:23:00Z","burn24hUSD":null,"updatedAt":"2026-11-05T05:52:00Z"}
+{"source":"grokbot-credits","creditsAvailableUSD":295.64,"creditsPurchasedUSD":300.0,"usedThisMonthUSD":304.37,"monthlyLimitUSD":null,"weeklyUsedPercent":100,"weeklyResetsAt":"2026-11-08T16:23:00Z","burn24hUSD":null,"updatedAt":"2026-11-05T05:52:00Z"}
 ```
 
 - `source` must be `grokbot-credits`; `creditsAvailableUSD` is a finite, nonnegative number.
+- `creditsPurchasedUSD` is the optional finite, nonnegative purchased credit balance; older files without it remain accepted. Zero, null, or omitted values do not provide a fill denominator.
 - `usedThisMonthUSD`, `monthlyLimitUSD`, and `burn24hUSD` are nonnegative numbers or null (omitted values are also accepted).
 - `weeklyUsedPercent` is a number from 0 to 100. `weeklyResetsAt` and required `updatedAt` are ISO UTC timestamps ending in `Z`. Future observations beyond 30 seconds are rejected.
 - Keep the file under 16 KB. The app only reads it and copies the validated reading into app-group `status.json`; the widget never reads either source file directly. Neither file is modified by the app.
 - The newer file's `updatedAt` decides weekly usage and reset time. Ties keep the original weekly file. A newer credits file replaces the old `creditsUSD`; an older credits file supplies a balance only if the weekly file has none. Missing or invalid credits files never break a valid weekly file. A valid credits file can also supply weekly usage when the original file is unavailable.
-- Once weekly usage is exhausted, **Grok credits** shows dollars available to two decimals, with **· $X.XX/day** when `burn24hUSD` is present.
-- The bar or ring always depletes with available credits. Its fill is available / monthly limit when a positive limit exists; otherwise, with no limit, it is available / (available + used this month). Missing or zero denominators show only the amount. No starting balance is invented.
+- Once weekly usage is exhausted, **Grok · Credits** (Credits in the smaller secondary font, matching weekly rows) shows dollars available to two decimals, with **· $X.XX/day** when `burn24hUSD` is present.
+- The bar or ring always depletes with available credits. Its fill is available / purchased credits when purchased credits is positive; otherwise available / monthly limit when that limit is positive. With neither positive denominator, only the amount is shown. Fill is capped at 100%. Monthly spending never determines fill, and no starting balance is invented.
 - At $100 or more the row uses the existing normal colour; below $100 it uses the middle colour, and below $25 the low/red colour. The colour preference remains respected.
 - Credits have their own clock: more than eight hours after `updatedAt`, the row fades and shows **Old reading**, independently of weekly freshness. Original-file-only credits retain that file's three-hour freshness rule.
 
 Preview evidence for 1.3.3 is kept in the ignored `build/grok-credits-1.3.3/` folder: below-limit, exhausted-295.64, under-100, under-25, and stale, each with `-used.png` and `-left.png` versions showing both styles and all three sizes.
+
+Preview evidence for 1.3.4 is kept in ignored `build/grok-credits-1.3.4/`, covering both styles and all sizes, used/left settings, purchased-credit fill, thresholds and stale readings.
