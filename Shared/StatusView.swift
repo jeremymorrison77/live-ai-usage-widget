@@ -71,13 +71,16 @@ struct UsageStatusView: View {
             } else if !compact && !large {
                 // Rows share the height evenly; both columns use the longer column's row count, so rows line up across.
                 let most = columns.map(rowCount).max() ?? 0
-                HStack(alignment: .top, spacing: 16) {
-                    ForEach(columns, id: \.self) { column in
-                        VStack(alignment: .leading, spacing: 4) {
-                            ForEach(column, id: \.self) { agent in rows(agent) }
-                            ForEach(0..<(most - rowCount(column)), id: \.self) { _ in Color.clear.frame(maxHeight: 55) }
+                GeometryReader { geometry in
+                    let rowHeight = min(55, max(0, (geometry.size.height - CGFloat(max(0, most - 1)) * 4) / CGFloat(max(1, most))))
+                    HStack(alignment: .top, spacing: 16) {
+                        ForEach(columns, id: \.self) { column in
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(column, id: \.self) { agent in rows(agent, mediumRowHeight: rowHeight) }
+                                ForEach(0..<(most - rowCount(column)), id: \.self) { _ in Color.clear.frame(height: rowHeight) }
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
                 }.frame(maxHeight: .infinity)
             } else {
@@ -91,7 +94,7 @@ struct UsageStatusView: View {
         }
     }
 
-    @ViewBuilder private func rows(_ agent: String) -> some View {
+    @ViewBuilder private func rows(_ agent: String, mediumRowHeight: CGFloat? = nil) -> some View {
         ForEach(shown(agent), id: \.window) { window in
             let waiting = loading(agent)
             let stale = waiting || status?.usage?[agent]?.isStale(at: date) == true || (window.resetsAt.map { $0 <= date } ?? false)
@@ -166,8 +169,10 @@ struct UsageStatusView: View {
             }
             }
             .opacity(stale ? 0.55 : 1)
-            // Rows share the height evenly, up to a comfortable spacing; with only a few readings they stay at the top.
-            .frame(maxHeight: compact ? .infinity : large ? 80 : 55)
+            // Medium rows have identical slots and top alignment, including the shorter credits row.
+            // Small and large retain their existing flexible heights.
+            .frame(height: mediumRowHeight, alignment: .top)
+            .frame(maxHeight: compact ? .infinity : large ? 80 : nil)
             .accessibilityElement(children: .combine)
         }
         if credits(agent) != nil {
@@ -213,7 +218,8 @@ struct UsageStatusView: View {
                 }
             }
             .opacity(old ? 0.55 : 1)
-            .frame(maxHeight: compact ? .infinity : large ? 80 : 55)
+            .frame(height: mediumRowHeight, alignment: .top)
+            .frame(maxHeight: compact ? .infinity : large ? 80 : nil)
             .accessibilityElement(children: .combine)
             .accessibilityLabel((usage?.creditsAccessibilityLabel(showsUsed: settings.showsUsed()) ?? "Grok credits") + (old ? ", old reading" : ""))
         }

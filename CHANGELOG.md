@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.8 (build 40)
+
+- Space medium-widget rows evenly using equal-height, top-aligned slots, including Grok Credits and empty slots in shorter columns. Preserve 1.3.7 typography and small/large layouts.
+
 ## 1.3.7 (build 39)
 
 - Match the Grok credits purchased total to the amount in size, weight and colour, in both left and used modes. Keep daily burn small and allow the full line to scale to fit Bars and Solar in every widget size.
