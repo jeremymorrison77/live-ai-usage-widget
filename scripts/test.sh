@@ -9,3 +9,6 @@ build/history-tests
 
 xcrun swiftc -parse-as-library -module-cache-path build/module-cache Helper/Reader.swift Helper/Collector.swift Helper/Updater.swift Helper/Diagnostics.swift tests/ReaderTests.swift -o build/reader-tests
 build/reader-tests
+
+xcrun swiftc -parse-as-library -module-cache-path build/module-cache Shared/Status.swift Shared/Settings.swift Helper/Reader.swift tests/GrokCreditsTests.swift -o build/grok-credits-tests
+build/grok-credits-tests

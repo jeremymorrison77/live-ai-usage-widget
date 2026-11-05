@@ -491,11 +491,49 @@ extension UsageReader {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Live AI Usage Widget", isDirectory: true).appendingPathComponent("grokbot-usage.json")
     }
-    static func grokBot(file: URL = grokBotFeed) throws -> [String: Any] {
+    static func grokBot(file: URL = grokBotFeed, creditsFile: URL? = nil) throws -> [String: Any] {
+        let creditsURL = creditsFile ?? file.deletingLastPathComponent().appendingPathComponent("grokbot-credits.json")
+        let weekly = Result { try grokBotReading(readGrokFile(file)) }
+        guard let credits = try? grokCreditsReading(readGrokFile(creditsURL)) else { return try weekly.get() }
+        var result = (try? weekly.get()) ?? [:]
+        let newer = date(credits["updatedAt"] as? String)! > (date(result["observed_at"] as? String) ?? .distantPast)
+        if newer {
+            result["status"] = "ok"
+            result["observed_at"] = credits["updatedAt"]
+            result["windows"] = [["window": "weekly", "used_percent": credits["weeklyUsedPercent"]!, "resets_at": credits["weeklyResetsAt"]!]]
+            result["maximum_age_seconds"] = 8.0 * 3600
+        }
+        // Keep the balance's own clock, even when weekly usage comes from the other file.
+        if newer || result["credits_usd"] == nil {
+            result["grok_credits"] = credits
+            result["credits_usd"] = credits["creditsAvailableUSD"]
+        } else { result["grok_credits"] = NSNull() }
+        return result
+    }
+    static func grokCreditsReading(_ data: Data) throws -> [String: Any] {
+        guard data.count < 16384,
+              let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              value["source"] as? String == "grokbot-credits" else { throw ReaderFailure("invalid_usage") }
+        func number(_ key: String, required: Bool = false) throws -> Double? {
+            if !required && (value[key] == nil || value[key] is NSNull) { return nil }
+            guard let n = value[key] as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID(),
+                  n.doubleValue.isFinite, n.doubleValue >= 0 else { throw ReaderFailure("invalid_usage") }
+            return n.doubleValue
+        }
+        _ = try number("creditsAvailableUSD", required: true)
+        guard let used = try number("weeklyUsedPercent", required: true), used <= 100 else { throw ReaderFailure("invalid_usage") }
+        for key in ["usedThisMonthUSD", "monthlyLimitUSD", "burn24hUSD"] { _ = try number(key) }
+        for key in ["updatedAt", "weeklyResetsAt"] {
+            guard let stamp = value[key] as? String, stamp.hasSuffix("Z"), let parsed = date(stamp),
+                  key != "updatedAt" || parsed <= Date().addingTimeInterval(30) else { throw ReaderFailure("invalid_usage") }
+        }
+        return value
+    }
+    private static func readGrokFile(_ file: URL) throws -> Data {
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: file.path) else { throw ReaderFailure("feed_missing") }
         guard attributes[.type] as? FileAttributeType == .typeRegular, (attributes[.size] as? Int ?? 0) < 16384,
               let data = try? Data(contentsOf: file) else { throw ReaderFailure("invalid_usage") }
-        return try grokBotReading(data)
+        return data
     }
     private static func date(_ value: String?) -> Date? {
         guard let value else { return nil }

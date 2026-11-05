@@ -105,8 +105,7 @@ struct UsageStatusView: View {
             let checking = phase != .shown
             // What the bar, ring and number show: what's left, or what's used. Colors always follow what's left.
             let value = settings.showsUsed() ? window.usedPercent : window.leftPercent
-            let exhausted = status?.usage?[agent]?.exhaustedWeekly(agent, window) == true
-            let number = exhausted ? 0 : value
+            let number = value
             let left = waiting || phase == .empty ? 0 : value
             let visible = phase == .shown ? 1.0 : 0.0
             // Widgets allow up to two seconds of animation; growth uses all of it, slowing to a stop. Only growth moves.
@@ -144,7 +143,7 @@ struct UsageStatusView: View {
                     Spacer(minLength: 1)
                     Text(waiting || checking ? "…" : "\(Int(number.rounded()))%")
                         .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
-                        .accessibilityLabel("\(Int(number.rounded()))% " + (exhausted || !settings.showsUsed() ? "left" : "used"))
+                        .accessibilityLabel("\(Int(number.rounded()))% " + (!settings.showsUsed() ? "left" : "used"))
                         .contentTransition(.numericText(value: left)).animation(grow ?? fade, value: left)
                 }.font(.system(size: nameSize))
                 if settings.style == "clean" {
@@ -172,16 +171,46 @@ struct UsageStatusView: View {
             .accessibilityElement(children: .combine)
         }
         if let amount = credits(agent) {
-            let old = status?.usage?[agent]?.isStale(at: date) == true
-                || windows(agent).contains(where: { $0.resetsAt.map { $0 <= date } == true })
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 3) {
-                    Text("Grok credits")
-                    Spacer(minLength: 1)
-                    Text(status?.checking(at: date) == true ? "…" : amount).monospacedDigit().fontWeight(.medium)
-                }.font(.system(size: nameSize)).lineLimit(1).minimumScaleFactor(0.6)
-                    .fixedSize(horizontal: false, vertical: true)
-                if old && !compact { Text("Old reading").font(.system(size: 10)).foregroundStyle(.secondary) }
+            let usage = status?.usage?[agent]
+            let old = usage?.creditsAreStale(at: date) == true
+            let balance = usage?.grokCredits
+            let level = balance?.level ?? .normal
+            let color = settings.usageColors ? WidgetSettings.color(hex: level == .critical ? settings.lowColor : level == .warning ? settings.middleColor : settings.highColor) : Color.accentColor
+            let fraction = status?.checking(at: date) == true ? 0 : balance?.fraction
+            HStack(spacing: ringGap) {
+                if solar, let fraction {
+                    ZStack {
+                        Circle().stroke(color.opacity(0.15), lineWidth: compact ? 2 : 3)
+                        Circle().trim(from: 0, to: fraction)
+                            .stroke(color, style: StrokeStyle(lineWidth: compact ? 2 : 3, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                    }.frame(width: ringSize, height: ringSize)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    if solar && !large && !compact {
+                        Text("Grok credits").font(.system(size: nameSize))
+                        Text(status?.checking(at: date) == true ? "…" : amount)
+                            .font(.system(size: nameSize)).foregroundStyle(color).monospacedDigit()
+                            .lineLimit(1).minimumScaleFactor(0.6)
+                    } else {
+                        HStack(spacing: 3) {
+                            Text("Grok credits")
+                            Spacer(minLength: 1)
+                            Text(status?.checking(at: date) == true ? "…" : amount)
+                                .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
+                        }.font(.system(size: nameSize)).lineLimit(1).minimumScaleFactor(0.4)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if !solar, let fraction {
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(color.opacity(0.12))
+                                Capsule().fill(color).frame(width: geometry.size.width * fraction)
+                            }
+                        }.frame(height: large ? 5 : 3).padding(.top, 2)
+                    }
+                    if old { Text("Old reading").font(.system(size: compact ? 8 : 10)).foregroundStyle(.secondary) }
+                }
             }
             .opacity(old ? 0.55 : 1)
             .frame(maxHeight: compact ? .infinity : large ? 80 : 55)

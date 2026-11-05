@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.3.3 (build 35)
 
-Grok Bot now accepts optional additional-usage credits. Once weekly usage reaches 100%, every widget style and size shows weekly at 0% left and a separate dollar balance when known. Bars and rings retain their used/left setting. Credits share the reading’s stale state, and the menu shows weekly usage and credits. Older feed files remain supported.
+Read the independent Grok Bot credits file on each minute check. Exhausted weekly usage respects the used/left setting and reveals a live dollar balance, optional daily burn, and a depleting bar or ring when a denominator is known. Credits use dollar-based colour thresholds and their own eight-hour stale warning. The newer feed determines weekly usage; invalid or missing credits never interrupt the original feed. Menu lines match the widget amounts.
 
 ## 1.3.2
 

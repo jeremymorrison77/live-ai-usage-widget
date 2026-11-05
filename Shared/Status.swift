@@ -114,6 +114,26 @@ struct UsageRefresh: Codable {
     let failureReason: UsageFailureReason?
 }
 
+/// Independent balance observation copied by the app into its shared snapshot.
+struct GrokCredits: Codable, Equatable {
+    let creditsAvailableUSD: Double
+    let usedThisMonthUSD: Double?
+    let monthlyLimitUSD: Double?
+    let burn24hUSD: Double?
+    let updatedAt: String
+    var date: Date? { UsageInputModel.parseDate(updatedAt) }
+    func isStale(at now: Date) -> Bool {
+        guard let date else { return true }
+        return now.timeIntervalSince(date) > 8 * 3600 || date.timeIntervalSince(now) > 30
+    }
+    var fraction: Double? {
+        let total = monthlyLimitUSD ?? usedThisMonthUSD.map { creditsAvailableUSD + $0 }
+        guard let total, total.isFinite, total > 0 else { return nil }
+        return min(1, max(0, creditsAvailableUSD / total))
+    }
+    var level: UsageLevel { creditsAvailableUSD < 25 ? .critical : creditsAvailableUSD < 100 ? .warning : .normal }
+}
+
 struct AgentUsage: Codable {
     let observedAt: Date?
     let windows: [UsageWindow]
@@ -123,6 +143,7 @@ struct AgentUsage: Codable {
     /// How old a reading may get before it fades, when the account sets its own (Grok Bot's file is written hourly: 3 hours).
     var maximumAge: TimeInterval? = nil
     var creditsUSD: Double? = nil
+    var grokCredits: GrokCredits? = nil
     // Readings fade after 45 minutes, or later when checks are spaced further apart.
     static var staleAfter: TimeInterval { max(45 * 60, Double(WidgetSettings.load().refreshMinutes) * 90) }
 
@@ -135,16 +156,20 @@ struct AgentUsage: Codable {
     }
     func creditsLabel(for provider: String) -> String? {
         guard windows.contains(where: { exhaustedWeekly(provider, $0) }),
-              let creditsUSD, creditsUSD.isFinite, (0...1_000_000_000).contains(creditsUSD) else { return nil }
-        return String(format: "$%.2f", locale: Locale(identifier: "en_US_POSIX"), creditsUSD)
+              let creditsUSD, creditsUSD.isFinite, creditsUSD >= 0 else { return nil }
+        let amount = String(format: "$%.2f", locale: Locale(identifier: "en_US_POSIX"), creditsUSD)
+        return amount + (grokCredits?.burn24hUSD.map { String(format: " · $%.2f/day", locale: Locale(identifier: "en_US_POSIX"), $0) } ?? "")
     }
-    func grokMenuLines(at date: Date) -> [String] {
+    func grokMenuLines(at date: Date, showsUsed: Bool = WidgetSettings.load().showsUsed()) -> [String] {
         guard let weekly = windows.first(where: { $0.window == "weekly" }) else { return [] }
         let old = isStale(at: date) || weekly.resetsAt.map { $0 <= date } == true
         let suffix = old ? " (old reading)" : ""
-        let weeklyText = weekly.usedPercent == 100 ? "0% left" : "\(Int(weekly.usedPercent.rounded()))% used"
+        let weeklyText = showsUsed ? "\(Int(weekly.usedPercent.rounded()))% used" : weekly.leftLabel
         return ["Grok Bot · Weekly " + weeklyText + suffix]
-            + (creditsLabel(for: "grokbot").map { ["Grok credits · " + $0 + suffix] } ?? [])
+            + (creditsLabel(for: "grokbot").map { ["Grok credits · " + $0 + (creditsAreStale(at: date) ? " (old reading)" : "")] } ?? [])
+    }
+    func creditsAreStale(at date: Date) -> Bool {
+        grokCredits?.isStale(at: date) ?? isStale(at: date)
     }
     static func resetLabel(_ reset: Date, at date: Date, calendar: Calendar = .current) -> String {
         let formatter = DateFormatter()
@@ -339,6 +364,7 @@ struct UsageInputModel {
         let shared_with_other_apps: Bool?
         let maximum_age_seconds: Double?
         let credits_usd: Double?
+        let grok_credits: GrokCredits?
 
         var refresh: UsageRefresh? {
             guard let rawStatus = refresh_status, let status = UsageRefreshStatus(rawValue: rawStatus) else { return nil }
@@ -366,7 +392,7 @@ struct UsageInputModel {
                 result[name] = AgentUsage(observedAt: windows.isEmpty ? nil : UsageInputModel.parseDate(input.observed_at),
                     windows: windows, refresh: input.refresh, sharedWithOtherApps: input.shared_with_other_apps,
                     maximumAge: input.maximum_age_seconds.flatMap { $0.isFinite && $0 > 0 ? $0 : nil },
-                    creditsUSD: input.credits_usd.flatMap { $0.isFinite && (0...1_000_000_000).contains($0) ? $0 : nil })
+                    creditsUSD: input.grok_credits?.creditsAvailableUSD ?? input.credits_usd.flatMap { $0.isFinite && (0...1_000_000_000).contains($0) ? $0 : nil }, grokCredits: input.grok_credits)
             }
         }
         return result
@@ -465,12 +491,18 @@ enum StatusStore {
                 $0 <= latestAllowed && $0 >= (previousObserved ?? .distantPast)
             } == true
             let refresh = mergedRefresh(previous?.refresh, value.refresh, latestAllowed: latestAllowed)
+            let useBalance = value.grokCredits?.date.map {
+                $0 <= latestAllowed && $0 >= (previous?.grokCredits?.date ?? (previous?.creditsUSD != nil ? previous?.observedAt : nil) ?? .distantPast)
+            } == true
+            let keepBalance = value.grokCredits != nil && !useBalance && previous?.grokCredits != nil
+            let balance = keepBalance ? previous?.grokCredits : useBalance ? value.grokCredits : useReading ? value.grokCredits : previous?.grokCredits
             if useReading || previous != nil || refresh != nil {
                 result[key] = AgentUsage(observedAt: useReading ? value.observedAt : previous?.observedAt,
                     windows: useReading ? value.windows : previous?.windows ?? [], refresh: refresh,
                     sharedWithOtherApps: useReading ? value.sharedWithOtherApps : previous?.sharedWithOtherApps,
                     maximumAge: value.maximumAge ?? previous?.maximumAge,
-                    creditsUSD: useReading ? value.creditsUSD : previous?.creditsUSD)
+                    creditsUSD: balance?.creditsAvailableUSD ?? (useReading ? value.creditsUSD : previous?.creditsUSD),
+                    grokCredits: balance)
             }
         }
         return result

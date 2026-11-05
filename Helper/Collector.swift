@@ -18,6 +18,10 @@ enum Collector {
             value["last_attempt_at"] = stamp
             do {
                 let reading = try read(provider)
+                if provider == "grokbot" {
+                    value.removeValue(forKey: "grok_credits")
+                    value.removeValue(forKey: "credits_usd")
+                }
                 value.merge(reading) { _, new in new }
                 value["refresh_status"] = "ok"; value["last_success_at"] = reading["observed_at"]
                 value.removeValue(forKey: "failure_reason"); value["next_attempt_epoch"] = now.timeIntervalSince1970+interval
