@@ -131,6 +131,11 @@ struct GrokCredits: Codable, Equatable {
         guard let total = [creditsPurchasedUSD, monthlyLimitUSD].compactMap({ $0 }).first(where: { $0.isFinite && $0 > 0 }) else { return nil }
         return min(1, max(0, creditsAvailableUSD / total))
     }
+    var purchased: Double? { creditsPurchasedUSD.flatMap { $0.isFinite && $0 > 0 ? $0 : nil } }
+    func fraction(showsUsed: Bool) -> Double? {
+        guard showsUsed, let purchased else { return fraction }
+        return min(1, max(0, (purchased - creditsAvailableUSD) / purchased))
+    }
     var level: UsageLevel { creditsAvailableUSD < 25 ? .critical : creditsAvailableUSD < 100 ? .warning : .normal }
 }
 
@@ -154,11 +159,32 @@ struct AgentUsage: Codable {
     func exhaustedWeekly(_ provider: String, _ window: UsageWindow) -> Bool {
         provider == "grokbot" && window.window == "weekly" && window.usedPercent == 100
     }
-    func creditsLabel(for provider: String) -> String? {
+    static func wholeDollars(_ value: Double) -> String {
+        String(format: "$%.0f", locale: Locale(identifier: "en_US_POSIX"), value)
+    }
+    func creditsAmount(showsUsed: Bool) -> String {
+        let available = grokCredits?.creditsAvailableUSD ?? creditsUSD ?? 0
+        if showsUsed, let purchased = grokCredits?.purchased {
+            return Self.wholeDollars(ceil(max(0, purchased - available)))
+        }
+        return Self.wholeDollars(floor(available))
+    }
+    var creditsDenominator: String {
+        grokCredits?.purchased.map { "/" + Self.wholeDollars(floor($0)) } ?? ""
+    }
+    var creditsBurn: String {
+        grokCredits?.burn24hUSD.map { " · " + Self.wholeDollars(floor($0)) + "/day" } ?? ""
+    }
+    func creditsLabel(for provider: String, showsUsed: Bool = false) -> String? {
         guard windows.contains(where: { exhaustedWeekly(provider, $0) }),
-              let creditsUSD, creditsUSD.isFinite, creditsUSD >= 0 else { return nil }
-        let amount = String(format: "$%.2f", locale: Locale(identifier: "en_US_POSIX"), creditsUSD)
-        return amount + (grokCredits?.burn24hUSD.map { String(format: " · $%.2f/day", locale: Locale(identifier: "en_US_POSIX"), $0) } ?? "")
+              let available = grokCredits?.creditsAvailableUSD ?? creditsUSD,
+              available.isFinite, available >= 0 else { return nil }
+        return creditsAmount(showsUsed: showsUsed) + creditsDenominator + creditsBurn
+    }
+    func creditsAccessibilityLabel(showsUsed: Bool) -> String {
+        "Grok credits " + creditsAmount(showsUsed: showsUsed)
+            + (grokCredits?.purchased.map { " of " + Self.wholeDollars(floor($0)) } ?? "")
+            + (showsUsed && grokCredits?.purchased != nil ? " used" : " left")
     }
     func grokMenuLines(at date: Date, showsUsed: Bool = WidgetSettings.load().showsUsed()) -> [String] {
         guard let weekly = windows.first(where: { $0.window == "weekly" }) else { return [] }
@@ -166,7 +192,7 @@ struct AgentUsage: Codable {
         let suffix = old ? " (old reading)" : ""
         let weeklyText = showsUsed ? "\(Int(weekly.usedPercent.rounded()))% used" : weekly.leftLabel
         return ["Grok Bot · Weekly " + weeklyText + suffix]
-            + (creditsLabel(for: "grokbot").map { ["Grok · Credits · " + $0 + (creditsAreStale(at: date) ? " (old reading)" : "")] } ?? [])
+            + (creditsLabel(for: "grokbot", showsUsed: showsUsed).map { _ in [creditsAccessibilityLabel(showsUsed: showsUsed) + (creditsAreStale(at: date) ? " (old reading)" : "")] } ?? [])
     }
     func creditsAreStale(at date: Date) -> Bool {
         grokCredits?.isStale(at: date) ?? isStale(at: date)

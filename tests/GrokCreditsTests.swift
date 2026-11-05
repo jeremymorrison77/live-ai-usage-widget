@@ -36,10 +36,10 @@ import Foundation
         check((reading["windows"] as! [[String: Any]])[0]["used_percent"] as? Double == 100)
         let inputs = try JSONDecoder().decode([String: UsageInputModel.UsageInput].self, from: JSONSerialization.data(withJSONObject: ["grokbot": reading]))
         let usage = UsageInputModel.agentUsage(inputs)["grokbot"]!
-        check(usage.creditsLabel(for: "grokbot") == "$295.64")
+        check(usage.creditsLabel(for: "grokbot") == "$295")
         check(usage.grokMenuLines(at: now, showsUsed: true)[0].contains("100% used"))
         check(usage.grokMenuLines(at: now, showsUsed: false)[0].contains("0% left"))
-        check(usage.grokMenuLines(at: now, showsUsed: false)[1] == "Grok · Credits · $295.64")
+        check(usage.grokMenuLines(at: now, showsUsed: false)[1] == "Grok credits $295 left")
         let balance = usage.grokCredits!
         check(balance.fraction == nil) // Spending must never invent a denominator.
         func decoded(_ overrides: [String: Any]) throws -> GrokCredits {
@@ -48,6 +48,29 @@ import Foundation
         }
         let purchased = try decoded(["creditsPurchasedUSD": 300, "monthlyLimitUSD": 1000])
         check(purchased.creditsPurchasedUSD == 300)
+        var displayed = usage; displayed.grokCredits = purchased
+        check(displayed.creditsLabel(for: "grokbot") == "$295/$300")
+        check(displayed.creditsLabel(for: "grokbot", showsUsed: true) == "$5/$300")
+        check(displayed.creditsAccessibilityLabel(showsUsed: false) == "Grok credits $295 of $300 left")
+        check(displayed.grokMenuLines(at: now, showsUsed: true)[1] == "Grok credits $5 of $300 used")
+        check(displayed.grokMenuLines(at: now, showsUsed: false)[1] == "Grok credits $295 of $300 left")
+        check(abs(purchased.fraction(showsUsed: true)! - 4.36 / 300) < 0.000001)
+        check(purchased.fraction(showsUsed: false) == purchased.fraction)
+        for available in [0.0, 24.99, 99.99, 295.0, 295.64, 300.0, 301.0] {
+            displayed.grokCredits = try decoded(["creditsPurchasedUSD": 300, "creditsAvailableUSD": available, "burn24hUSD": 12.99])
+            check(displayed.creditsAmount(showsUsed: false) == AgentUsage.wholeDollars(floor(available)))
+            check(displayed.creditsAmount(showsUsed: true) == AgentUsage.wholeDollars(ceil(max(0, 300 - available))))
+            check(displayed.creditsBurn == " · $12/day")
+            check(displayed.grokCredits!.level == (available < 25 ? .critical : available < 100 ? .warning : .normal))
+        }
+        for missing: Any in [NSNull(), 0] {
+            displayed.grokCredits = try decoded(["creditsPurchasedUSD": missing, "monthlyLimitUSD": 600])
+            check(displayed.creditsLabel(for: "grokbot", showsUsed: true) == "$295")
+            check(displayed.creditsAccessibilityLabel(showsUsed: true) == "Grok credits $295 left")
+            check(displayed.grokCredits!.fraction(showsUsed: true) == 295.64 / 600)
+        }
+        check(usage.creditsLabel(for: "grokbot", showsUsed: true) == "$295")
+
         check(abs(purchased.fraction! - 295.64 / 300) < 0.000001)
         check(try! decoded(["creditsPurchasedUSD": 300, "usedThisMonthUSD": 0]).fraction == purchased.fraction)
         check(try! decoded(["creditsPurchasedUSD": 300, "usedThisMonthUSD": 9999]).fraction == purchased.fraction)
@@ -72,7 +95,7 @@ import Foundation
         let limited = GrokCredits(creditsAvailableUSD: 50, usedThisMonthUSD: 100, monthlyLimitUSD: 200, burn24hUSD: 12, updatedAt: UsageReader.iso(now))
         check(limited.fraction == 0.25)
         var burn = usage; burn.grokCredits = limited; burn.creditsUSD = 50
-        check(burn.creditsLabel(for: "grokbot") == "$50.00 · $12.00/day")
+        check(burn.creditsLabel(for: "grokbot") == "$50 · $12/day")
         check(try! JSONDecoder().decode(AgentUsage.self, from: JSONEncoder().encode(usage)).grokCredits == balance)
         try writeWeekly(now.addingTimeInterval(60), used: 90)
         let newer = try UsageReader.grokBot(file: weekly)

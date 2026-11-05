@@ -96,22 +96,22 @@ struct UsageHistoryTests {
         var exhausted = AgentUsage(observedAt: now, windows: [UsageWindow(window: "weekly", usedPercent: 100, resetsAt: now.addingTimeInterval(86400))], maximumAge: 10800, creditsUSD: 300)
         precondition(exhausted.exhaustedWeekly("grokbot", exhausted.windows[0]))
         precondition(!exhausted.exhaustedWeekly("codex", exhausted.windows[0]))
-        precondition(exhausted.creditsLabel(for: "grokbot") == "$300.00")
+        precondition(exhausted.creditsLabel(for: "grokbot") == "$300")
         precondition(exhausted.creditsLabel(for: "codex") == nil)
         var belowLimit = grokUsage
         belowLimit.creditsUSD = 300
         precondition(belowLimit.creditsLabel(for: "grokbot") == nil)
         var zeroCredits = exhausted
         zeroCredits.creditsUSD = 0
-        precondition(zeroCredits.creditsLabel(for: "grokbot") == "$0.00")
-        precondition(exhausted.grokMenuLines(at: now) == ["Grok Bot · Weekly 0% left", "Grok · Credits · $300.00"])
+        precondition(zeroCredits.creditsLabel(for: "grokbot") == "$0")
+        precondition(exhausted.grokMenuLines(at: now) == ["Grok Bot · Weekly 0% left", "Grok credits $300 left"])
         precondition(exhausted.grokMenuLines(at: now.addingTimeInterval(10800)).allSatisfy { $0.contains("old reading") })
         let roundTrip = try JSONDecoder().decode(AgentUsage.self, from: JSONEncoder().encode(exhausted))
         precondition(roundTrip.creditsUSD == 300)
         let kept = StatusStore.merged(["grokbot": exhausted], ["grokbot": AgentUsage(observedAt: nil, windows: [])])["grokbot"]!
         precondition(kept.creditsUSD == 300 && kept.observedAt == now)
         exhausted.creditsUSD = 250.75
-        precondition(StatusStore.merged(["grokbot": kept], ["grokbot": exhausted])["grokbot"]!.creditsLabel(for: "grokbot") == "$250.75")
+        precondition(StatusStore.merged(["grokbot": kept], ["grokbot": exhausted])["grokbot"]!.creditsLabel(for: "grokbot") == "$250")
         exhausted.creditsUSD = nil
         precondition(exhausted.grokMenuLines(at: now) == ["Grok Bot · Weekly 0% left"])
         precondition(StatusStore.merged(["grokbot": kept], ["grokbot": exhausted])["grokbot"]!.creditsUSD == nil)

@@ -10,6 +10,6 @@ class CreditsLabelTests(unittest.TestCase):
         self.assertIn("Group {", title)
         self.assertIn('Text("Grok")', title)
         self.assertIn('Text(" · " + "Credits").font(.system(size: labelSize))', title)
-        layouts = source.split("if let amount = credits(agent)", 1)[1].split("private var creditsTitle", 1)[0]
+        layouts = source.split("if credits(agent) != nil", 1)[1].split("private var creditsTitle", 1)[0]
         self.assertEqual(layouts.count("creditsTitle"), 2)
         self.assertNotIn('Text("Grok credits")', layouts)

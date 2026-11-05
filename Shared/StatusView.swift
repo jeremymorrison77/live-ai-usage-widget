@@ -57,7 +57,7 @@ struct UsageStatusView: View {
     }
     private func credits(_ agent: String) -> String? {
         guard shown(agent).contains(where: { $0.window == "weekly" }) else { return nil }
-        return status?.usage?[agent]?.creditsLabel(for: agent)
+        return status?.usage?[agent]?.creditsLabel(for: agent, showsUsed: settings.showsUsed())
     }
     private var count: Int { agents.reduce(0) { $0 + shown($1).count + (credits($1) == nil ? 0 : 1) } }
     private var roomy: Bool { compact && count <= 3 }
@@ -170,13 +170,13 @@ struct UsageStatusView: View {
             .frame(maxHeight: compact ? .infinity : large ? 80 : 55)
             .accessibilityElement(children: .combine)
         }
-        if let amount = credits(agent) {
+        if credits(agent) != nil {
             let usage = status?.usage?[agent]
             let old = usage?.creditsAreStale(at: date) == true
             let balance = usage?.grokCredits
             let level = balance?.level ?? .normal
             let color = settings.usageColors ? WidgetSettings.color(hex: level == .critical ? settings.lowColor : level == .warning ? settings.middleColor : settings.highColor) : Color.accentColor
-            let fraction = status?.checking(at: date) == true ? 0 : balance?.fraction
+            let fraction = status?.checking(at: date) == true ? 0 : balance?.fraction(showsUsed: settings.showsUsed())
             HStack(spacing: ringGap) {
                 if solar, let fraction {
                     ZStack {
@@ -189,14 +189,14 @@ struct UsageStatusView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     if solar && !large && !compact {
                         creditsTitle.font(.system(size: nameSize))
-                        Text(status?.checking(at: date) == true ? "…" : amount)
+                        creditsAmount(usage)
                             .font(.system(size: nameSize)).foregroundStyle(color).monospacedDigit()
                             .lineLimit(1).minimumScaleFactor(0.6)
                     } else {
                         HStack(alignment: .firstTextBaseline, spacing: 3) {
                             creditsTitle
                             Spacer(minLength: 1)
-                            Text(status?.checking(at: date) == true ? "…" : amount)
+                            creditsAmount(usage)
                                 .foregroundStyle(color).monospacedDigit().fontWeight(.medium)
                         }.font(.system(size: nameSize)).lineLimit(1).minimumScaleFactor(0.4)
                             .fixedSize(horizontal: false, vertical: true)
@@ -215,8 +215,15 @@ struct UsageStatusView: View {
             .opacity(old ? 0.55 : 1)
             .frame(maxHeight: compact ? .infinity : large ? 80 : 55)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Grok credits " + amount + " left" + (old ? ", old reading" : ""))
+            .accessibilityLabel((usage?.creditsAccessibilityLabel(showsUsed: settings.showsUsed()) ?? "Grok credits") + (old ? ", old reading" : ""))
         }
+    }
+
+    private func creditsAmount(_ usage: AgentUsage?) -> Text {
+        if status?.checking(at: date) == true { return Text("…") }
+        return Text(usage?.creditsAmount(showsUsed: settings.showsUsed()) ?? "")
+            + Text(usage?.creditsDenominator ?? "").font(.system(size: labelSize))
+            + Text(usage?.creditsBurn ?? "").font(.system(size: labelSize))
     }
 
     private var creditsTitle: some View {

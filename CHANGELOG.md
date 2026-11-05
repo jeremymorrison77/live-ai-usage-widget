@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.6 (build 38)
+
+- Show Grok credits as whole dollars: $295/$300 left, or $5/$300 used. Round available down and spent up; daily burn is whole dollars.
+- Show the purchased total in the smaller label font. Bars and rings follow the used/left setting; colours still follow available credits.
+- Without positive purchased credits, keep showing available dollars and the existing fill fallback in either mode. Menu and accessibility describe left or used explicitly.
+
 ## 1.3.5 (build 37)
 
 - Match Grok · Credits to weekly row typography, keeping the visible middle dot and Credits at the smaller secondary size.
