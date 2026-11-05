@@ -222,7 +222,7 @@ struct UsageStatusView: View {
     private func creditsAmount(_ usage: AgentUsage?) -> Text {
         if status?.checking(at: date) == true { return Text("…") }
         return Text(usage?.creditsAmount(showsUsed: settings.showsUsed()) ?? "")
-            + Text(usage?.creditsDenominator ?? "").font(.system(size: labelSize))
+            + Text(usage?.creditsDenominator ?? "").font(.system(size: nameSize))
             + Text(usage?.creditsBurn ?? "").font(.system(size: labelSize))
     }
 

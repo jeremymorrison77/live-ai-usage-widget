@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.7 (build 39)
+
+- Match the Grok credits purchased total to the amount in size, weight and colour, in both left and used modes. Keep daily burn small and allow the full line to scale to fit Bars and Solar in every widget size.
+
 ## 1.3.6 (build 38)
 
 - Show Grok credits as whole dollars: $295/$300 left, or $5/$300 used. Round available down and spent up; daily burn is whole dollars.

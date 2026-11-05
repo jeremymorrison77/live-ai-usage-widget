@@ -6,7 +6,7 @@ import SwiftUI
 @main struct RenderCredits {
     @MainActor static func main() throws {
         _ = NSApplication.shared
-        let folder = URL(fileURLWithPath: "build/grok-credits-1.3.6")
+        let folder = URL(fileURLWithPath: "build/grok-credits-1.3.7")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let now = Date()
         for scenario in ["below-limit", "exhausted-with-purchased", "under-100", "under-25", "stale", "no-purchased"] {
