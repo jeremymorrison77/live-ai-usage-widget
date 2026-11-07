@@ -1,5 +1,7 @@
 # Release acceptance
 
+**Status (11/07/2026):** local source and installed app are 1.3.8 (build 40); the latest GitHub release is 1.3.1. The 1.3.8 source is on GitHub, but no release exists after 1.3.1. Open gates before any release: Jeremy's direct approval to push and publish, CI, signed and notarized build of the final version, published-download checksum check, clean-Mac check. The 1.3.2 record below is historical.
+
 Version 1.3.2 (build 34), prepared locally on November 2, 2026; publication is pending Icarus review. A signed, notarized Apple Silicon ZIP is prepared. Notarization establishes Apple's distribution check, not compatibility with every account or Mac.
 
 ## Verified locally

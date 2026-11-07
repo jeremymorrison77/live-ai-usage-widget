@@ -1,5 +1,7 @@
 # Validation record
 
+**Status note (11/07/2026):** local source and the installed app are 1.3.8 (build 40); the latest GitHub release is 1.3.1 (the 1.3.8 source is on GitHub). The entries below are dated history and were not rewritten. Their "1.3.2" wording describes the state on their dates. No validation of 1.3.3 through 1.3.8 beyond what the entries and CHANGELOG record has been added here, and no release exists for those versions.
+
 ## Grok additional-usage credits — 11/4/2026, local only
 
 `bash scripts/test.sh`: 18 Python tests and native history/store and reader/collector/updater checks passed. Added checks for present/absent/zero/negative/string/boolean/null/huge credits; exhausted weekly with and without credits; credits hidden below the limit and for other providers; dollar depletion; stale menu labels; status.json publication/round-trip; failed-check retention and clearing an omitted balance in a newer good reading.

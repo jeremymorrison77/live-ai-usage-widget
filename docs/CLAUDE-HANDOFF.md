@@ -1,6 +1,6 @@
 # Maintainer handoff
 
-Current version: **1.3.2 (build 34), Apple Silicon, macOS 14+**, prepared locally for a full GitHub release; not yet published. This repository is the whole project; it has no parent workspace.
+Current local and installed version: **1.3.8 (build 40), Apple Silicon, macOS 14+** (Git main 25e7bda, clean, matches the GitHub main branch, checked 11/07/2026). Latest GitHub release: **1.3.1**. The 1.3.2 through 1.3.8 source is on GitHub, but no release or tag exists for any of those versions. Owner: Systems and Comms Manager (assigned 11/07/2026). The Grok feed stays quarantined and the legacy Icarus publisher stays until its consumers are reconciled. Remaining release gates: Jeremy's direct approval to push and publish, CI, a signed and notarized build of the final version, published-download checksum check, and a clean-Mac check. This repository is the whole project; it has no parent workspace. The 1.3.2 notes below are historical.
 
 ## Current state
 
