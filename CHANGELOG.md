@@ -2,7 +2,7 @@
 
 ## Unreleased (not built or published)
 
-- Add a separate **Show Grok credits** switch in Settings, under Appearance, shown while Grok Bot is on. It hides only Grok's dollar credits row in the widgets, the menu line and the row count; Grok's weekly reading keeps its own controls. Default on, so existing settings files behave as before.
+- Add a separate Grok Bot credits switch in Settings, last in the Small widget readings list, shown while Grok Bot is on. It hides only Grok's dollar credits row in the widgets, the menu line and the row count; Grok's weekly reading keeps its own controls. Default on, so existing settings files behave as before.
 
 ## 1.3.8 (build 40)
 

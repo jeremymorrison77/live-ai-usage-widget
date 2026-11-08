@@ -598,6 +598,8 @@ struct AccountRow: View {
                     Label("Couldn't read usage file", systemImage: "exclamationmark.circle.fill").labelStyle(StatusLabel(color: .orange))
                 }
                 if !busy {
+                    // Enabled but not reading: keep a way to turn it off, beside Try Again.
+                    if enabled && !connected { Button("Disconnect") { model.disconnect(provider) } }
                     Button {
                         if connected { model.disconnect(provider) } else if enabled { model.refresh() } else { model.connect(provider) }
                     } label: {
@@ -734,12 +736,6 @@ struct SettingsView: View {
                 }
                 Picker("Date format", selection: $model.settings.usDates) { Text("US").tag(true); Text("European").tag(false) }
                 Toggle("Usage colors", isOn: $model.settings.usageColors)
-                if model.settings.enabled.contains("grokbot") {
-                    Toggle(isOn: $model.settings.showGrokCredits) {
-                        Text("Show Grok credits")
-                        Text("Hides only the dollar credits row; Grok's weekly reading keeps its own switch")
-                    }
-                }
                 HStack {
                     percentField(model.settings.highThreshold) { model.settings.highThreshold = min(100, max(model.settings.lowThreshold+1, $0)) }
                     Text("or more remaining"); Spacer(); colorPicker($model.settings.highColor)
@@ -771,6 +767,10 @@ struct SettingsView: View {
                         model.settings.hiddenSmallMetrics.removeAll { $0 == key }
                         if !on { model.settings.hiddenSmallMetrics.append(key) }
                     }))
+                }
+                // Last in the list, after Grok Bot's weekly reading; hides only the dollar credits row.
+                if model.settings.enabled.contains("grokbot") {
+                    Toggle(WidgetStatus.name("grokbot") + " · credits", isOn: $model.settings.showGrokCredits)
                 }
                 // Limits the account's plan doesn't have stay listed, grayed out, so nothing seems to be missing.
                 ForEach(missingChoices, id: \.self) { key in
