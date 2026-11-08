@@ -734,6 +734,12 @@ struct SettingsView: View {
                 }
                 Picker("Date format", selection: $model.settings.usDates) { Text("US").tag(true); Text("European").tag(false) }
                 Toggle("Usage colors", isOn: $model.settings.usageColors)
+                if model.settings.enabled.contains("grokbot") {
+                    Toggle(isOn: $model.settings.showGrokCredits) {
+                        Text("Show Grok credits")
+                        Text("Hides only the dollar credits row; Grok's weekly reading keeps its own switch")
+                    }
+                }
                 HStack {
                     percentField(model.settings.highThreshold) { model.settings.highThreshold = min(100, max(model.settings.lowThreshold+1, $0)) }
                     Text("or more remaining"); Spacer(); colorPicker($model.settings.highColor)

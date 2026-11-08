@@ -56,7 +56,7 @@ struct UsageStatusView: View {
         return all.filter { $0.0 == agent }.map { $0.1 }
     }
     private func credits(_ agent: String) -> String? {
-        guard shown(agent).contains(where: { $0.window == "weekly" }) else { return nil }
+        guard settings.showGrokCredits, shown(agent).contains(where: { $0.window == "weekly" }) else { return nil }
         return status?.usage?[agent]?.creditsLabel(for: agent, showsUsed: settings.showsUsed())
     }
     private var count: Int { agents.reduce(0) { $0 + shown($1).count + (credits($1) == nil ? 0 : 1) } }

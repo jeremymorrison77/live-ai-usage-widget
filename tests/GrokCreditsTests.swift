@@ -54,6 +54,16 @@ import Foundation
         check(displayed.creditsAccessibilityLabel(showsUsed: false) == "Grok credits $295 of $300 left")
         check(displayed.grokMenuLines(at: now, showsUsed: true)[1] == "Grok credits $5 of $300 used")
         check(displayed.grokMenuLines(at: now, showsUsed: false)[1] == "Grok credits $295 of $300 left")
+        // Separate Grok credits switch: hides only the credits line; the weekly reading keeps its own control.
+        check(displayed.grokMenuLines(at: now, showsUsed: false, showsCredits: false).count == 1)
+        check(displayed.grokMenuLines(at: now, showsUsed: false, showsCredits: false)[0].contains("Grok Bot · Weekly"))
+        check(displayed.grokMenuLines(at: now, showsUsed: false, showsCredits: true).count == 2)
+        check(WidgetSettings().showGrokCredits)
+        let oldFile = try JSONDecoder().decode(WidgetSettings.self, from: Data("{\"enabled\":[\"grokbot\"]}".utf8))
+        check(oldFile.showGrokCredits) // old settings files keep credits on
+        var hidden = WidgetSettings(); hidden.enabled = ["grokbot"]; hidden.showGrokCredits = false
+        let round = try JSONDecoder().decode(WidgetSettings.self, from: JSONEncoder().encode(hidden))
+        check(!round.showGrokCredits && round.enabled == ["grokbot"])
         check(abs(purchased.fraction(showsUsed: true)! - 4.36 / 300) < 0.000001)
         check(purchased.fraction(showsUsed: false) == purchased.fraction)
         for available in [0.0, 24.99, 99.99, 295.0, 295.64, 300.0, 301.0] {

@@ -186,13 +186,16 @@ struct AgentUsage: Codable {
             + (grokCredits?.purchased.map { " of " + Self.wholeDollars(floor($0)) } ?? "")
             + (showsUsed && grokCredits?.purchased != nil ? " used" : " left")
     }
-    func grokMenuLines(at date: Date, showsUsed: Bool = WidgetSettings.load().showsUsed()) -> [String] {
+    func grokMenuLines(at date: Date, showsUsed: Bool = WidgetSettings.load().showsUsed(), showsCredits: Bool = WidgetSettings.load().showGrokCredits) -> [String] {
         guard let weekly = windows.first(where: { $0.window == "weekly" }) else { return [] }
         let old = isStale(at: date) || weekly.resetsAt.map { $0 <= date } == true
         let suffix = old ? " (old reading)" : ""
         let weeklyText = showsUsed ? "\(Int(weekly.usedPercent.rounded()))% used" : weekly.leftLabel
-        return ["Grok Bot · Weekly " + weeklyText + suffix]
-            + (creditsLabel(for: "grokbot", showsUsed: showsUsed).map { _ in [creditsAccessibilityLabel(showsUsed: showsUsed) + (creditsAreStale(at: date) ? " (old reading)" : "")] } ?? [])
+        var lines = ["Grok Bot · Weekly " + weeklyText + suffix]
+        if showsCredits, creditsLabel(for: "grokbot", showsUsed: showsUsed) != nil {
+            lines.append(creditsAccessibilityLabel(showsUsed: showsUsed) + (creditsAreStale(at: date) ? " (old reading)" : ""))
+        }
+        return lines
     }
     func creditsAreStale(at date: Date) -> Bool {
         grokCredits?.isStale(at: date) ?? isStale(at: date)
