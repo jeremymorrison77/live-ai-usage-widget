@@ -2,7 +2,7 @@
 
 A macOS desktop widget that shows how much of your Claude Code, ChatGPT Codex and Grok Bot usage limits are left, or how much you have used. Small, medium and large widgets come in two styles: Bars (default), which shows what is left, and Solar, rings that fill clockwise as you use your limits. Accounts and data stay on your own Mac.
 
-**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.3.1-macOS-arm64.zip)** · public version 1.3.1 · macOS 14 or later · M1 or newer
+**[Download for Mac (Apple Silicon)](https://github.com/jeremymorrison77/live-ai-usage-widget/releases/latest/download/Live-AI-Usage-Widget-1.3.9-macOS-arm64.zip)** · public version 1.3.9 · macOS 14 or later · M1 or newer
 
 <p align="center"><img src="docs/images/overview.png" alt="Settings window and the widget in all sizes and styles" width="100%"></p>
 
@@ -10,7 +10,7 @@ Pictures are drawn from the app's own views using current local readings and set
 
 [Bars: small](docs/images/clean-small.png) · [medium](docs/images/clean-medium.png) · [large](docs/images/clean-large.png) · [Solar: small](docs/images/solar-small.png) · [medium](docs/images/solar-medium.png) · [large](docs/images/solar-large.png) · [Settings](docs/images/settings.png)
 
-**Latest downloadable release: 1.3.1. Current source on GitHub and the installed app: 1.3.8 (build 40), with no release built from it yet** (checked 11/07/2026). The download link above gets 1.3.1 until a later release is published. Apple Silicon Macs, macOS 14 or later. Public releases are signed and notarized by Apple.
+**Latest downloadable release: 1.3.9** (11/17/2026). Apple Silicon Macs, macOS 14 or later. Public releases are signed and notarized by Apple.
 
 ## Download and install
 

@@ -23,6 +23,9 @@ import Darwin
         precondition(windows[0]["resets_at"] as? String == "2026-10-17T12:00:00Z")
         fails { _ = try UsageReader.claudePanel("Current session\n12% used\nResets 1pm", now: now) }
         fails { _ = try UsageReader.reset("Resets 29pm (UTC)", now: now, session: true) }
+        precondition(!UsageReader.signedOut("warning: Your login expires in 2 days \u{00B7} run /login to renew"))
+        precondition(!UsageReader.signedOut("Your login expires in 2 days \u{00B7}\nrun /login to renew"))
+        precondition(UsageReader.signedOut("Not logged in \u{00B7} run /login"))
         let rewritten = try UsageReader.terminal("99% used\r\u{1b}[2K12% used")
         precondition(rewritten == "12% used")
         let cleared = try UsageReader.terminal("old\nold\u{1b}[2Jfresh"); precondition(cleared == "fresh")

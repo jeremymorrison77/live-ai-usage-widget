@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased (not built or published)
+## 1.3.9 (build 41)
 
+- Fix Claude Code readings failing with "sign in required" when the login is about to expire. The notice "Login expires in ... to renew" is no longer mistaken for being signed out.
 - Add a separate Grok Bot credits switch in Settings, last in the Small widget readings list, shown while Grok Bot is on. It hides only Grok's dollar credits row in the widgets, the menu line and the row count; Grok's weekly reading keeps its own controls. Default on, so existing settings files behave as before.
+- Add Disconnect beside Try Again for Grok Bot.
+- Refresh every picture (Bars and Solar in small, medium and large, and the full Settings panel).
 
 ## 1.3.8 (build 40)
 

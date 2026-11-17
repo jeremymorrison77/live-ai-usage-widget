@@ -93,6 +93,12 @@ final class ChildProcess {
 }
 
 enum UsageReader {
+    /// True only when Claude says it is signed out. The "Your login expires in N days · run /login to renew"
+    /// warning appears while the sign-in still works, so it must not count.
+    static func signedOut(_ text: String) -> Bool {
+        let cleaned = replace("(?i)login expires in[\\s\\S]{0,80}?to renew", text)
+        return !matches("(?i)Not logged in|Login expired|run /login", cleaned).isEmpty
+    }
     static func matches(_ pattern: String, _ text: String) -> [[String]] {
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
         return regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).map { match in
@@ -179,7 +185,7 @@ enum UsageReader {
     static func codex(directory: URL, binary: String? = nil, timeout: Double = 15) throws -> [String: Any] {
         let child = try ChildProcess(binary: binary ?? find("codex"), arguments: ["app-server", "--listen", "stdio://"], directory: directory.path)
         defer { child.stop() }
-        try child.sendJSON(["id": 0, "method": "initialize", "params": ["clientInfo": ["name": "live_ai_usage_widget", "title": "Live AI Usage Widget", "version": "1.3.2"]]])
+        try child.sendJSON(["id": 0, "method": "initialize", "params": ["clientInfo": ["name": "live_ai_usage_widget", "title": "Live AI Usage Widget", "version": "1.3.9"]]])
         let start = ProcessInfo.processInfo.systemUptime
         var pending = Data(), total = 0, initialized = false
         while ProcessInfo.processInfo.systemUptime - start < timeout {
@@ -340,7 +346,7 @@ enum UsageReader {
             trace?("usage: " + String(decoding: data, as: UTF8.self))
             let text = try terminal(String(decoding: data, as: UTF8.self))
             if !matches("(?i)unknown option|unrecognized option", text).isEmpty { throw ReaderFailure("cli_update_required") }
-            if !matches("(?i)Not logged in|Login expired|run /login", text).isEmpty { throw ReaderFailure("sign_in_required") }
+            if signedOut(text) { throw ReaderFailure("sign_in_required") }
             if !sent, try answerFirstRun(text, child: child, answered: &firstRun) { data = Data(); continue }
             // Cancel only this optional opt-in. Never approve trust or permission prompts.
             if !sent && !dismissedAutoMode && text.contains("Permission Required: Make auto mode your default permission mode?") && text.contains("Escape to cancel:") {
@@ -420,7 +426,7 @@ extension UsageReader {
             trace?(plain(data))
             let text = plain(data)
             if !matches("(?i)unknown option|unrecognized option", text).isEmpty { throw ReaderFailure("cli_update_required") }
-            if !matches("(?i)Not logged in|Login expired|run /login", text).isEmpty { throw ReaderFailure("sign_in_required") }
+            if signedOut(text) { throw ReaderFailure("sign_in_required") }
             if try answerFirstRun(text, child: child, answered: &firstRun) { data = Data(); continue }
             if answers < 3 && text.contains("Accessing workspace:") && text.contains("Enter y/n:") {
                 let flat = text.replacingOccurrences(of: "\r", with: "").replacingOccurrences(of: "\n", with: "")

@@ -211,7 +211,9 @@ def fetch(timeout=35):
             text = plain(buffer.decode('utf-8', 'replace'))
             if re.search(r'unknown option|unrecognized option', text, re.I):
                 raise UsageUnavailable('cli_update_required')
-            if re.search(r'Not logged in|Login expired|run /login', text, re.I):
+            # "Your login expires in N days · run /login to renew" is only a warning; sign-in still works.
+            signed_out = re.sub(r'login expires in[\s\S]{0,80}?to renew', '', text, flags=re.I)
+            if re.search(r'Not logged in|Login expired|run /login', signed_out, re.I):
                 raise UsageUnavailable('sign_in_required')
             if (not sent and not dismissed_auto_mode
                     and 'Permission Required: Make auto mode your default permission mode?' in text
